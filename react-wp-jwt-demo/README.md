@@ -101,6 +101,34 @@ src/
 └── routes.tsx        # Route definitions
 ```
 
+### Component Architecture
+
+```mermaid
+graph TD
+    A[App.tsx] --> B[AuthProvider]
+    B --> C[Navbar]
+    B --> D[Routes]
+    
+    D --> E[Home Page]
+    D --> F[Profile Page - Protected]
+    D --> G[Publish Page - Protected]
+    
+    C --> H[LoginForm]
+    H --> I[Auth API]
+    I --> J[WordPress JWT Endpoint]
+    
+    B --> K[localStorage Hook]
+    B --> L[JWT Debug Utils]
+    
+    F --> M[useAuth Hook]
+    G --> M
+    M --> B
+    
+    style F fill:#ffe6e6
+    style G fill:#ffe6e6
+    style M fill:#e6f3ff
+    style B fill:#e6ffe6
+```
 ## 🔧 Technology Stack
 
 - **React 18** - UI library
@@ -113,12 +141,38 @@ src/
 
 ## 🔐 Authentication Flow
 
-1. User enters credentials in the login form
-2. App makes POST request to `/wp-json/jwt-auth/v1/token`
-3. WordPress validates credentials and returns JWT token
-4. Token is stored in localStorage and used for subsequent API calls
-5. Protected routes check for valid token before rendering
-6. Token is included in Authorization header for authenticated requests
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant React App
+    participant localStorage
+    participant WordPress API
+    
+    User->>React App: Enter credentials
+    React App->>WordPress API: POST /wp-json/jwt-auth/v1/token
+    WordPress API->>WordPress API: Validate credentials
+    WordPress API->>React App: Return JWT token + user data
+    React App->>localStorage: Store token & user meta
+    React App->>User: Show authenticated state
+    
+    Note over React App: For subsequent requests
+    React App->>React App: Get token from localStorage
+    React App->>WordPress API: API call with Authorization header
+    WordPress API->>React App: Return protected data
+```
+
+
+### Step-by-Step Process
+
+1. **User Login**: User enters credentials in the login form
+2. **API Request**: App makes POST request to `/wp-json/jwt-auth/v1/token`
+3. **WordPress Validation**: WordPress validates credentials against user database
+4. **Token Generation**: WordPress generates and returns JWT token with user data
+5. **Local Storage**: Token and user metadata stored in browser localStorage
+6. **State Update**: AuthContext updates with authenticated state
+7. **Route Protection**: Protected routes check for valid token before rendering
+8. **API Calls**: Subsequent requests include token in Authorization header
 
 ## 🐛 Debugging
 
