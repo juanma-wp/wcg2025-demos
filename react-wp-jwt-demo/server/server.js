@@ -176,6 +176,9 @@ app.post('/api/login', async (req, res) => {
 
 // Refresh token endpoint
 app.post('/api/refresh', (req, res) => {
+  if (process.env.DEBUG === 'true') {
+    console.log('🔄 [' + new Date().toISOString() + '] Refresh token request received');
+  }
   const refreshToken = req.cookies.refresh_token;
 
   if (!refreshToken || !activeRefreshTokens.has(refreshToken)) {
