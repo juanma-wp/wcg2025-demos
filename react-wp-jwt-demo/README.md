@@ -1,18 +1,17 @@
 # React WordPress JWT Demo
 
-A demonstration React application that showcases JWT authentication integration with WordPress REST API. This project demonstrates how to build a modern React frontend that authenticates with WordPress using JWT tokens.
+A modern React application demonstrating secure JWT authentication with WordPress REST API using a hybrid approach: access tokens in memory + refresh tokens in HttpOnly cookies via an Express auth server.
 
 ## 🚀 Features
 
-- **🔐 Secure JWT Authentication**: Modern hybrid approach with access tokens in memory and refresh tokens in HttpOnly cookies
-- **🔄 Automatic Token Refresh**: Silent re-authentication prevents session loss
-- **🛡️ XSS Protection**: Access tokens stored in memory, not localStorage
-- **🍪 HttpOnly Cookies**: Refresh tokens stored securely, inaccessible to JavaScript
-- **⚛️ React Router**: Client-side routing with protected routes
-- **💅 Modern UI**: Built with Tailwind CSS for responsive design
-- **📝 TypeScript**: Full type safety throughout the application
-- **🐛 Debug Tools**: Built-in JWT token validation and debugging
-- **🔌 WordPress Integration**: Secure integration with WordPress REST API
+- **🔐 Secure JWT Authentication**: Hybrid approach with Express auth server
+- **🔄 Automatic Token Refresh**: Silent re-authentication on page load
+- **🛡️ XSS Protection**: Access tokens in memory, refresh tokens in HttpOnly cookies
+- **🗄️ WordPress API Proxy**: Secure WordPress REST API integration
+- **⚛️ React Router**: Protected routes with authentication guards
+- **💅 Modern UI**: Tailwind CSS with responsive design
+- **📝 TypeScript**: Full type safety and IntelliSense
+- **🐛 Debug Tools**: Comprehensive JWT debugging and validation
 
 ## 📋 Prerequisites
 
@@ -25,94 +24,82 @@ Before running this project, ensure you have the following installed:
 
 ### WordPress Setup
 
-1. **Install JWT Authentication Plugin**
-   - Install the [JWT Authentication for WP REST API](https://wordpress.org/plugins/jwt-authentication-for-wp-rest-api/) plugin
-   - Or manually install a JWT authentication plugin that provides the `/wp-json/jwt-auth/v1/token` endpoint
+1. **Install JWT Plugin**: Install a WordPress JWT plugin like:
+   - [wp-rest-auth-multi](https://github.com/juanma-wp/wcg2025-demos/tree/main/wp-rest-auth-multi) (recommended)
+   - [JWT Authentication for WP REST API](https://wordpress.org/plugins/jwt-authentication-for-wp-rest-api/)
 
-2. **Configure WordPress**
-   - Add the following to your WordPress `wp-config.php` file:
+2. **Configure Plugin**: Set up your chosen plugin's endpoints in the auth server's `.env` file
+
+3. **WordPress Config**: Add JWT secret to `wp-config.php` (`wp-rest-auth-multi` plugin):
    ```php
-   define('JWT_AUTH_SECRET_KEY', 'your-top-secret-key');
-   define('JWT_AUTH_CORS_ENABLE', true);
+   define('WP_JWT_AUTH_SECRET', 'your-very-long-and-random-secret-key-here');
+   define('WP_JWT_ACCESS_TTL', 900);     // 15 minutes (optional)
+   define('WP_JWT_REFRESH_TTL', 1209600); // 14 days (optional)
    ```
-
-3. **Enable CORS** (if needed)
-   - Add CORS headers to allow requests from your React app domain
-   - The plugin should handle this if `JWT_AUTH_CORS_ENABLE` is set to `true`
 
 ## 🛠️ Installation
 
-### 1. React App Setup
+### 1. Install Dependencies
 
-1. **Clone or navigate to the project directory**
-   ```bash
-   cd react-wp-jwt-demo
-   ```
+```bash
+# Install React app dependencies
+npm install
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+# Install auth server dependencies
+cd server && npm install
+```
 
-3. **Configure environment variables**
-   Create a `.env` file in the project root:
-   ```env
-   VITE_WP_BASE_URL=https://your-wordpress-site.com
-   ```
-   Replace `https://your-wordpress-site.com` with your actual WordPress site URL.
+### 2. Configure Environment
 
-### 2. Auth Server Setup
+**React App**: Copy and configure the client environment:
+```bash
+cp .env.example .env.local
+# Edit with your WordPress URL and auth server URL
+```
 
-1. **Navigate to the server directory**
-   ```bash
-   cd server
-   ```
+**Auth Server**: Copy and configure the server environment:
+```bash
+cd server
+cp .env.example .env
+# Edit with your WordPress JWT plugin endpoints and secrets
+```
 
-2. **Install server dependencies**
-   ```bash
-   npm install
-   ```
+### 3. Environment Variables
 
-3. **Configure server environment**
-   ```bash
-   cp .env.example .env
-   ```
+**React App (`.env.local`)**:
+```env
+VITE_AUTH_SERVER_URL=http://localhost:3001
+VITE_WP_BASE_URL=https://your-wordpress-site.com
+VITE_DEBUG=true
+```
 
-   Edit the `.env` file with your configuration:
-   ```env
-   ACCESS_TOKEN_SECRET=your-secure-random-secret-key
-   REFRESH_TOKEN_SECRET=your-secure-random-refresh-secret
-   WP_JWT_ENDPOINT=http://localhost:8080/wp-json/jwt-auth/v1/token
-   CLIENT_URL=http://localhost:5173
-   PORT=3001
-   ```
+**Auth Server (`server/.env`)**:
+```env
+WP_BASE_URL=https://your-wordpress-site.com/
+WP_JWT_NAMESPACE=jwt/v1
+ACCESS_TOKEN_SECRET=your-secure-random-secret
+REFRESH_TOKEN_SECRET=your-secure-random-secret
+CLIENT_URL=http://localhost:5173
+DEBUG=true
+SSL_VERIFY=false  # For local development only
+```
 
 ## 🚀 Running the Project
 
-You need to run both the auth server and the React app:
+Start both services in separate terminals:
 
-### 1. Start the Auth Server
 ```bash
-cd server
+# Terminal 1: Start auth server
+cd server && npm run dev
+
+# Terminal 2: Start React app
 npm run dev
 ```
-This starts the auth server at `http://localhost:3001`
 
-### 2. Start the React App (in a new terminal)
-```bash
-npm run dev
-```
-This starts the React app at `http://localhost:5173`
+- **React App**: http://localhost:5173
+- **Auth Server**: http://localhost:3001
 
-### Production Build
-```bash
-npm run build
-```
-
-### Preview Production Build
-```bash
-npm run preview
-```
+For production deployment, see [DEPLOYMENT.md](./DEPLOYMENT.md)
 
 ## 📁 Project Structure
 
@@ -200,113 +187,65 @@ graph TD
 - **cors** - Cross-origin resource sharing
 - **ky** - HTTP client for WordPress API calls
 
-## 🔐 Authentication Flow
+## 🔐 Architecture Overview
 
+This demo uses a **3-tier security architecture**:
 
-```mermaid
-sequenceDiagram
-    participant User
-    participant React App
-    participant Memory
-    participant Auth Server
-    participant Cookie
-    participant WordPress API
-
-    User->>React App: Enter credentials
-    React App->>Auth Server: POST /api/login
-    Auth Server->>WordPress API: POST /wp-json/jwt-auth/v1/token
-    WordPress API->>Auth Server: Return WP JWT + user data
-    Auth Server->>Auth Server: Generate access token + refresh token
-    Auth Server->>Cookie: Set HttpOnly refresh token
-    Auth Server->>React App: Return access token + user data
-    React App->>Memory: Store access token
-    React App->>User: Show authenticated state
-
-    Note over React App: For WordPress API requests
-    React App->>Memory: Get access token
-    React App->>Auth Server: Extract WP token from access token
-    React App->>WordPress API: API call with WP token
-    WordPress API->>React App: Return protected data
-
-    Note over React App: Auto token refresh (before expiry)
-    React App->>Auth Server: POST /api/refresh (with cookie)
-    Auth Server->>Cookie: Read refresh token
-    Auth Server->>Auth Server: Validate refresh token
-    Auth Server->>React App: Return new access token
-    React App->>Memory: Update access token
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   React App     │    │  Express Auth   │    │   WordPress     │
+│  (Frontend UI)  │◄──►│     Server      │◄──►│   REST API      │
+│                 │    │  (JWT Handler)  │    │ (Content + Auth)│
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+   Memory Storage        HttpOnly Cookies       JWT Plugin
+   (Access Tokens)      (Refresh Tokens)       (User Auth)
 ```
 
-### Modern Secure Authentication Flow
+### 🔄 Authentication Flow
 
-1. **🔐 User Login**: User enters credentials in the login form
-2. **🌐 Server Authentication**: React app sends credentials to auth server
-3. **✅ WordPress Validation**: Auth server validates with WordPress JWT endpoint
-4. **🎟️ Token Generation**: Auth server creates access token (15 min) and refresh token (7 days)
-5. **🍪 Secure Storage**: Refresh token stored in HttpOnly cookie, access token returned to React
-6. **💾 Memory Storage**: Access token stored in React app memory (not localStorage)
-7. **🔄 Auto Refresh**: Before access token expires, automatically refresh using HttpOnly cookie
-8. **🚪 Secure Logout**: Server clears refresh token cookie and invalidates session
-9. **🔒 API Calls**: WordPress API calls use embedded WP token from access token payload
+1. **Login**: User → Auth Server → WordPress → Tokens generated
+2. **Storage**: Access token (memory) + Refresh token (HttpOnly cookie)
+3. **API Calls**: React App → Auth Server (proxy) → WordPress API
+4. **Auto Refresh**: Silent token renewal on page load using refresh cookie
+5. **Logout**: Clear all tokens and invalidate session
 
-### 🛡️ Security Benefits
+### 🛡️ Security Features
 
-- **❌ XSS Protection**: Access tokens not in localStorage, refresh tokens not accessible to JavaScript
-- **✅ Session Persistence**: HttpOnly cookies survive page refreshes
-- **🔄 Automatic Recovery**: Silent token refresh maintains user session
-- **🚫 CSRF Protection**: SameSite cookie attributes prevent cross-site attacks
-- **⏰ Short-Lived Tokens**: Access tokens expire quickly, limiting exposure window
+- **XSS Protection**: Tokens not in localStorage
+- **Session Persistence**: HttpOnly cookies survive refreshes
+- **CSRF Protection**: SameSite cookie attributes
+- **Auto Recovery**: Silent login on app restart
+- **Proxy Pattern**: WordPress never exposed to frontend
 
 ## 🐛 Debugging
 
-The application includes comprehensive JWT debugging features:
+Enable debugging in both environments:
 
-- **Console Logging**: Detailed logs for authentication flow
-- **Token Validation**: Automatic JWT token structure validation
-- **Request Tracking**: HTTP request/response logging
-- **Token Preview**: Safe token preview in console (first 20 characters)
+```env
+# React App
+VITE_DEBUG=true
 
-Check the browser console for debugging information prefixed with `🔍 JWT Debug`.
+# Auth Server
+DEBUG=true
+```
 
-## 🔧 Configuration
-
-### Environment Variables
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `VITE_WP_BASE_URL` | Your WordPress site URL | Yes |
-
-### WordPress Plugin Configuration
-
-Ensure your JWT plugin is configured with:
-- Secret key for token signing
-- CORS enabled for your domain
-- Proper endpoint `/wp-json/jwt-auth/v1/token`
+Check browser console for `🔍 JWT Debug` messages covering:
+- Authentication flow
+- Token validation
+- API requests/responses
+- Silent login attempts
 
 ## 🚨 Troubleshooting
 
-### Common Issues
+**Login fails**: Check WordPress credentials and JWT plugin configuration
+**CORS errors**: Ensure auth server CORS allows your React app domain
+**Session lost**: Verify refresh token cookies are being set and sent
+**API errors**: Check WordPress JWT plugin endpoints and SSL certificates
 
-1. **CORS Errors**
-   - Ensure CORS is enabled in your WordPress JWT plugin
-   - Check that your domain is allowed in CORS settings
+## 📚 Additional Documentation
 
-2. **Authentication Fails**
-   - Verify WordPress credentials are correct
-   - Check that JWT plugin is active and configured
-   - Ensure the JWT secret key is set in wp-config.php
-
-3. **Token Invalid**
-   - Check token expiration settings in WordPress
-   - Verify the JWT secret key matches between WordPress and any validation
-
-4. **API Endpoints Not Found**
-   - Confirm JWT authentication plugin is installed and active
-   - Check that permalink structure is not "Plain"
-
-## 📚 API Endpoints Used
-
-- `POST /wp-json/jwt-auth/v1/token` - Login and get JWT token
-- `POST /wp-json/jwt-auth/v1/token/validate` - Validate existing token (if supported by plugin)
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Production deployment guide
+- **[server/README.md](./server/README.md)** - Auth server documentation
 
 ## 🤝 Contributing
 

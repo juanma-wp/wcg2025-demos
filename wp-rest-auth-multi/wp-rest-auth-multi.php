@@ -152,18 +152,19 @@ class WP_REST_Auth_Multi {
     private function create_oauth_clients() {
         $clients = get_option('oauth2_clients', []);
 
-        if (empty($clients)) {
-            $clients['demo-client'] = [
-                'client_secret' => wp_hash_password('demo-secret'),
-                'redirect_uris' => [
-                    'http://localhost:3000/callback',
-                    'http://localhost:5173/callback',
-                    'https://example.com/callback'
-                ]
-            ];
+        // Always update the demo client to ensure correct redirect URIs
+        $clients['demo-client'] = [
+            'client_secret' => wp_hash_password('demo-secret'),
+            'redirect_uris' => [
+                'http://localhost:3000/callback',
+                'http://localhost:5173/callback',
+                'http://localhost:5174/callback',
+                'http://localhost:5175/callback',
+                'https://example.com/callback'
+            ]
+        ];
 
-            update_option('oauth2_clients', $clients);
-        }
+        update_option('oauth2_clients', $clients);
     }
 
     public function missing_config_notice() {
