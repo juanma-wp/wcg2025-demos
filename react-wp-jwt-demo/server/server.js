@@ -124,11 +124,11 @@ app.post('/api/login', async (req, res) => {
 
     // Extract user information
     const userPayload = {
-      userId: wpResponse.user_id || wpResponse.ID,
-      email: wpResponse.user_email,
-      nicename: wpResponse.user_nicename,
-      displayName: wpResponse.user_display_name,
-      wpToken: wpResponse.token // Store WordPress token for API calls
+      userId: wpResponse.user?.id || wpResponse.user_id || wpResponse.ID,
+      email: wpResponse.user?.email || wpResponse.user_email,
+      nicename: wpResponse.user?.username || wpResponse.user_nicename,
+      displayName: wpResponse.user?.username || wpResponse.user_display_name,
+      wpToken: wpResponse.access_token || wpResponse.token // Store WordPress token for API calls
     };
 
     // Generate our own tokens
