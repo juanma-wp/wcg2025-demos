@@ -142,8 +142,8 @@ app.post('/api/login', async (req, res) => {
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/api',
+      sameSite: 'lax', // Changed from 'strict' to 'lax' for better compatibility
+      path: '/', // Changed from '/api' to '/' to ensure it's sent with all requests
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
@@ -185,7 +185,7 @@ app.post('/api/refresh', (req, res) => {
   const payload = verifyRefreshToken(refreshToken);
   if (!payload) {
     activeRefreshTokens.delete(refreshToken);
-    res.clearCookie('refresh_token', { path: '/api' });
+    res.clearCookie('refresh_token', { path: '/' }); // Match the path used when setting
     return res.status(401).json({ error: 'Invalid refresh token' });
   }
 
@@ -212,7 +212,7 @@ app.post('/api/logout', (req, res) => {
     activeRefreshTokens.delete(refreshToken);
   }
 
-  res.clearCookie('refresh_token', { path: '/api' });
+  res.clearCookie('refresh_token', { path: '/' }); // Match the path used when setting
   res.json({ message: 'Logged out successfully' });
 });
 

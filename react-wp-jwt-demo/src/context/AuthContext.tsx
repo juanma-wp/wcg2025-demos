@@ -171,17 +171,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const attemptSilentLogin = async () => {
       try {
-        await refreshToken(true) // Silent refresh
+        console.log('🔍 JWT Debug - Attempting silent login on app load...')
+        console.log('🔍 JWT Debug - Auth server URL:', import.meta.env.VITE_AUTH_SERVER_URL || 'http://localhost:3001')
 
-        if (isMounted && accessToken) {
+        const response = await Auth.refresh()
+        console.log('🔍 JWT Debug - Refresh response:', response)
+
+        if (isMounted) {
+          setAccessToken(response.access_token)
+          scheduleRefresh(response.expires_in)
+
           // Get user profile after successful refresh
-          const profile = await Auth.getProfile(accessToken)
+          const profile = await Auth.getProfile(response.access_token)
           setUser(profile.user)
-          console.log('🔍 JWT Debug - Silent login successful')
+          console.log('🔍 JWT Debug - Silent login successful, user:', profile.user)
         }
-      } catch (error) {
+      } catch (error: any) {
         // Silent failure - this is expected on first visit or after logout
-        // Don't log anything as this is normal behavior
+        console.log('🔍 JWT Debug - Silent login failed:', error.message || error)
+        console.log('🔍 JWT Debug - Error details:', error.response?.data || error.response || 'No additional details')
       }
     }
 
@@ -190,7 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [scheduleRefresh])
 
   // Cleanup on unmount
   useEffect(() => {
