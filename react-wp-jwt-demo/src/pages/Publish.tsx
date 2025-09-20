@@ -3,8 +3,8 @@ import { useAuth } from '../context/AuthContext'
 import { wpApi } from '../api/wp'
 
 export default function Publish() {
-  const { token } = useAuth()
-  const api = wpApi(() => token)
+  const { accessToken } = useAuth()
+  const api = wpApi(() => accessToken)
   const [title, setTitle] = useState('My API Post')
   const [content, setContent] = useState('Hello from the API!')
   const [status, setStatus] = useState<'draft' | 'publish'>('draft')
@@ -14,7 +14,7 @@ export default function Publish() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!token) return
+    if (!accessToken) return
     setLoading(true); setError(null); setResult(null)
     try { setResult(await api.createPost({ title, content, status })) }
     catch (e: any) { setError(e?.message || 'Failed to publish') }
@@ -27,7 +27,7 @@ export default function Publish() {
         <h2 className="text-3xl font-bold text-gray-900 mb-4">Publish Post</h2>
       </div>
 
-      {!token && (
+      {!accessToken && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <p className="text-yellow-800">Please login first to create posts.</p>
         </div>
@@ -39,12 +39,12 @@ export default function Publish() {
             <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
               Title
             </label>
-            <input 
+            <input
               id="title"
               type="text"
-              value={title} 
-              onChange={e=>setTitle(e.target.value)} 
-              required 
+              value={title}
+              onChange={e=>setTitle(e.target.value)}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               placeholder="Enter post title"
             />
@@ -54,10 +54,10 @@ export default function Publish() {
             <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
               Content
             </label>
-            <textarea 
+            <textarea
               id="content"
-              value={content} 
-              onChange={e=>setContent(e.target.value)} 
+              value={content}
+              onChange={e=>setContent(e.target.value)}
               rows={6}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               placeholder="Enter post content"
@@ -68,9 +68,9 @@ export default function Publish() {
             <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
               Status
             </label>
-            <select 
+            <select
               id="status"
-              value={status} 
+              value={status}
               onChange={e=>setStatus(e.target.value as any)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             >
@@ -79,12 +79,12 @@ export default function Publish() {
             </select>
           </div>
 
-          <button 
-            disabled={!token || loading} 
+          <button
+            disabled={!accessToken || loading}
             type="submit"
             className={`w-full py-2 px-4 rounded-md font-medium transition-colors ${
-              !token || loading 
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+              !accessToken || loading
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-blue-500 hover:bg-blue-600 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
             }`}
           >

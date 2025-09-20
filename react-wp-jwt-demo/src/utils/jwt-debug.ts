@@ -59,3 +59,4 @@ export function validateJwtBasics(token: string) {
   console.log('🔍 JWT Debug - Token appears valid')
   return true
 }
+

@@ -3,14 +3,14 @@ import { useAuth } from '../context/AuthContext'
 import { wpApi } from '../api/wp'
 
 export default function Profile() {
-  const { token } = useAuth()
-  const api = wpApi(() => token)
+  const { accessToken } = useAuth()
+  const api = wpApi(() => accessToken)
   const [profile, setProfile] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   async function fetchProfile() {
-    if (!token) return
+    if (!accessToken) return
     setLoading(true); setError(null)
     try { setProfile(await api.me()) } catch (e: any) { setError(e?.message || 'Failed') } finally { setLoading(false) }
   }
@@ -21,19 +21,19 @@ export default function Profile() {
         <h2 className="text-3xl font-bold text-gray-900 mb-4">Profile</h2>
       </div>
 
-      {!token && (
+      {!accessToken && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <p className="text-yellow-800">Please login first to fetch your profile.</p>
         </div>
       )}
 
       <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-        <button 
-          onClick={fetchProfile} 
-          disabled={!token || loading}
+        <button
+          onClick={fetchProfile}
+          disabled={!accessToken || loading}
           className={`w-full py-2 px-4 rounded-md font-medium transition-colors ${
-            !token || loading
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+            !accessToken || loading
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : 'bg-blue-500 hover:bg-blue-600 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
           }`}
         >

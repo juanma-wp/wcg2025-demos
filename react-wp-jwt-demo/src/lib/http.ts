@@ -1,10 +1,13 @@
 import ky from 'ky'
 
-const baseUrl = import.meta.env.VITE_WP_BASE_URL?.replace(/\/$/, '')
+const defaultBaseUrl = import.meta.env.VITE_WP_BASE_URL?.replace(/\/$/, '')
 
-export function makeClient(getToken?: () => string | null) {
+export function makeClient(customBaseUrl?: string, getToken?: () => string | null) {
+  const baseUrl = customBaseUrl || defaultBaseUrl
+  const prefixUrl = customBaseUrl ? customBaseUrl : `${baseUrl}/wp-json`
+
   return ky.create({
-    prefixUrl: `${baseUrl}/wp-json`,
+    prefixUrl,
     hooks: {
       beforeRequest: [ (req) => {
         const t = getToken?.()

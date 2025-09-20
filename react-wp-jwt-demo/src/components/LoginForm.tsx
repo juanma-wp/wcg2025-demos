@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { decodeJwtPayload } from '../utils/jwt-debug'
 
 export default function LoginForm() {
-  const { token, meta, login, logout } = useAuth()
+  const { accessToken, user, login, logout, isLoading: authLoading, error: authError } = useAuth()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -13,10 +13,20 @@ export default function LoginForm() {
     e.preventDefault()
     setError(null)
     setLoading(true)
-    try { await login(username, password) } catch (e: any) { setError(e?.message || 'Login failed') } finally { setLoading(false) }
+    try {
+      await login(username, password)
+      setUsername('')
+      setPassword('')
+    } catch (e: any) {
+      setError(e?.message || 'Login failed')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  if (token) {
+  const isLoadingState = loading || authLoading
+
+  if (accessToken && user) {
     return (
       <div className="bg-green-50 border border-green-200 rounded-lg p-6 max-w-md">
         <div className="flex items-center mb-3">
@@ -26,20 +36,20 @@ export default function LoginForm() {
             </svg>
           </div>
           <p className="text-green-800 font-medium">Authenticated</p>
-          <span className="ml-2 text-sm text-green-600">({meta?.user_email})</span>
+          <span className="ml-2 text-sm text-green-600">({user.email})</span>
         </div>
         <div className="bg-gray-50 rounded p-3 mb-4 space-y-3">
           <div>
             <p className="text-xs font-medium text-gray-700 mb-2">Full JWT Token:</p>
             <div className="bg-white rounded border p-2 max-h-32 overflow-y-auto">
               <code className="text-xs text-gray-800 break-all font-mono leading-relaxed">
-                {token}
+                {accessToken}
               </code>
             </div>
           </div>
           
           {(() => {
-            const decoded = decodeJwtPayload(token)
+            const decoded = decodeJwtPayload(accessToken)
             if (!decoded) return null
             
             const expiryDate = decoded.payload.exp ? new Date(decoded.payload.exp * 1000) : null
@@ -52,11 +62,15 @@ export default function LoginForm() {
                   <div className="grid grid-cols-1 gap-2 text-xs">
                     <div className="flex justify-between">
                       <span className="font-medium text-gray-600">User ID:</span>
-                      <span className="text-gray-800">{decoded.payload.data?.user?.id || 'N/A'}</span>
+                      <span className="text-gray-800">{decoded.payload.userId || user.id || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="font-medium text-gray-600">Username:</span>
-                      <span className="text-gray-800">{decoded.payload.data?.user?.user_login || 'N/A'}</span>
+                      <span className="font-medium text-gray-600">Email:</span>
+                      <span className="text-gray-800">{decoded.payload.email || user.email || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-600">Display Name:</span>
+                      <span className="text-gray-800">{decoded.payload.displayName || user.displayName || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="font-medium text-gray-600">Issuer:</span>
@@ -141,20 +155,20 @@ export default function LoginForm() {
             placeholder="Enter your password"
           />
         </div>
-        <button 
-          disabled={loading} 
+        <button
+          disabled={isLoadingState}
           type="submit"
           className={`w-full py-2 px-4 rounded-md font-medium transition-colors ${
-            loading 
-              ? 'bg-gray-400 cursor-not-allowed' 
+            isLoadingState
+              ? 'bg-gray-400 cursor-not-allowed'
               : 'bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
           } text-white`}
         >
-          {loading ? 'Signing in…' : 'Get JWT'}
+          {isLoadingState ? 'Signing in…' : 'Get JWT'}
         </button>
-        {error && (
+        {(error || authError) && (
           <div className="bg-red-50 border border-red-200 rounded-md p-3">
-            <p className="text-red-600 text-sm">{error}</p>
+            <p className="text-red-600 text-sm">{error || authError}</p>
           </div>
         )}
       </form>

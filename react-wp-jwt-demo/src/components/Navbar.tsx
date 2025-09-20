@@ -3,7 +3,7 @@ import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 export function Navbar() {
-  const { token, meta, logout } = useAuth()
+  const { accessToken, user, logout } = useAuth()
   return (
     <header className="border-b border-gray-200 bg-white shadow-sm">
       <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -50,10 +50,10 @@ export function Navbar() {
           </NavLink>
         </nav>
         <div className="flex items-center space-x-3">
-          {token ? (
+          {accessToken && user ? (
             <>
-              <span className="text-sm text-gray-600">Hi, {meta?.user_display_name || 'user'}</span>
-              <button 
+              <span className="text-sm text-gray-600">Hi, {user.displayName || 'user'}</span>
+              <button
                 onClick={logout}
                 className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm font-medium transition-colors"
               >
