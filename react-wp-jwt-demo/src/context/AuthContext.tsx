@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshTimeoutRef.current = setTimeout(async () => {
       console.log('🔄 JWT Debug - Auto-refreshing token...')
       try {
-        await refreshToken()
+        await refreshToken() // Not silent - we want to see auto-refresh logs
       } catch (error) {
         console.error('🔄 JWT Debug - Auto-refresh failed:', error)
         // If refresh fails, user will need to log in again
@@ -76,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   // Refresh token function
-  const refreshToken = useCallback(async () => {
+  const refreshToken = useCallback(async (silent = false) => {
     // If there's already a refresh in progress, return that promise
     if (refreshPromiseRef.current) {
       return refreshPromiseRef.current
@@ -84,7 +84,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     refreshPromiseRef.current = (async () => {
       try {
-        console.log('🔄 JWT Debug - Refreshing token...')
+        if (!silent) {
+          console.log('🔄 JWT Debug - Refreshing token...')
+        }
+
         const response = await Auth.refresh()
 
         setAccessToken(response.access_token)
@@ -97,10 +100,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         validateJwtBasics(response.access_token)
 
       } catch (error) {
-        console.error('🔄 JWT Debug - Token refresh failed:', error)
+        if (!silent) {
+          console.error('🔄 JWT Debug - Token refresh failed:', error)
+          setError('Session expired. Please log in again.')
+        }
         setAccessToken(null)
         setUser(null)
-        setError('Session expired. Please log in again.')
         throw error
       } finally {
         refreshPromiseRef.current = null
@@ -166,8 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const attemptSilentLogin = async () => {
       try {
-        console.log('🔍 JWT Debug - Attempting silent login...')
-        await refreshToken()
+        await refreshToken(true) // Silent refresh
 
         if (isMounted && accessToken) {
           // Get user profile after successful refresh
@@ -176,8 +180,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log('🔍 JWT Debug - Silent login successful')
         }
       } catch (error) {
-        console.log('🔍 JWT Debug - No existing session found')
-        // No existing session, user needs to login
+        // Silent failure - this is expected on first visit or after logout
+        // Don't log anything as this is normal behavior
       }
     }
 

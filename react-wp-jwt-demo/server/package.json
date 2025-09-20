@@ -12,7 +12,8 @@
     "cors": "^2.8.5",
     "cookie-parser": "^1.4.6",
     "jsonwebtoken": "^9.0.2",
-    "ky": "^1.7.2"
+    "ky": "^1.7.2",
+    "dotenv": "^16.3.1"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",

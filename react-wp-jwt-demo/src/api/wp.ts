@@ -24,19 +24,13 @@ export type WpPost = {
 }
 
 export function wpApi(getAccessToken: () => string | null) {
-  // Extract WordPress token from our access token payload
-  const getWordPressToken = () => {
-    const accessToken = getAccessToken()
-    if (!accessToken) return null
+  // Use auth server proxy instead of calling WordPress directly
+  const AUTH_SERVER_URL = import.meta.env.VITE_AUTH_SERVER_URL || 'http://localhost:3001'
+  const http = makeClient(AUTH_SERVER_URL, getAccessToken)
 
-    const decoded = decodeJwtPayload(accessToken)
-    return decoded?.payload?.wpToken || null
-  }
-
-  const http = makeClient(undefined, getWordPressToken)
   return {
-    me: () => http.get('wp/v2/users/me', { searchParams: { context: 'edit' } }).json<WpUser>(),
+    me: () => http.get('api/wp/wp/v2/users/me', { searchParams: { context: 'edit' } }).json<WpUser>(),
     createPost: (payload: { title: string; content: string; status: 'draft' | 'publish' }) =>
-      http.post('wp/v2/posts', { json: payload }).json<WpPost>(),
+      http.post('api/wp/wp/v2/posts', { json: payload }).json<WpPost>(),
   }
 }
