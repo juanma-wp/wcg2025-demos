@@ -85,6 +85,19 @@ The plugin includes a comprehensive admin settings page with four tabs:
 - PHP 7.4 or higher
 - `openssl` extension enabled
 
+### Testing
+
+The plugin includes comprehensive PHPUnit tests using wp-env:
+
+```bash
+cd wp-rest-auth-multi
+npm install && composer install
+npm run env:start
+npm run test
+```
+
+See [tests/README.md](wp-rest-auth-multi/tests/README.md) for detailed testing documentation.
+
 ---
 
 ## 🚀 2. OAuth2 Demo: `react-wp-oauth-demo`
