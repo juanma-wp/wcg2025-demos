@@ -1,14 +1,35 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import ErrorMessage from '../components/ErrorMessage';
+import ApiTester from '../components/ApiTester';
 import { SCOPE_DESCRIPTIONS } from '../utils/oauth';
 
 const HomePage: React.FC = () => {
   const { isAuthenticated, user, grantedScopes, login, error, clearError } = useAuth();
 
+  // Available scopes for selection
+  const availableScopes = [
+    'read',
+    'write',
+    'delete',
+    'upload_files',
+    'moderate_comments',
+    'manage_categories'
+  ];
+
+  const [selectedScopes, setSelectedScopes] = useState<string[]>(['read', 'write']);
+
+  const handleScopeToggle = (scope: string) => {
+    setSelectedScopes(prev =>
+      prev.includes(scope)
+        ? prev.filter(s => s !== scope)
+        : [...prev, scope]
+    );
+  };
+
   const handleLogin = () => {
-    // Request comprehensive permissions - WordPress will show consent screen
-    login(['read', 'write', 'upload_files', 'moderate_comments']);
+    // Request selected permissions - WordPress will show consent screen
+    login(selectedScopes.length > 0 ? selectedScopes : ['read']);
   };
 
   if (isAuthenticated && user) {
@@ -101,19 +122,8 @@ const HomePage: React.FC = () => {
         </div>
 
         {/* API Testing Section */}
-        <div className="bg-white rounded-lg shadow-md p-6 mt-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">API Testing</h3>
-          <p className="text-gray-600 mb-4">
-            Your access token is now available for making authenticated requests to the WordPress REST API.
-          </p>
-          <div className="bg-gray-50 rounded-md p-4">
-            <h4 className="text-sm font-medium text-gray-900 mb-2">Sample API Endpoints:</h4>
-            <ul className="text-sm text-gray-600 space-y-1">
-              <li>• GET <code className="text-blue-600">/wp-json/wp/v2/posts</code> - Fetch posts</li>
-              <li>• GET <code className="text-blue-600">/wp-json/wp/v2/users/me</code> - Get current user</li>
-              <li>• POST <code className="text-blue-600">/wp-json/wp/v2/posts</code> - Create a post</li>
-            </ul>
-          </div>
+        <div className="mt-6">
+          <ApiTester />
         </div>
       </div>
     );
@@ -138,33 +148,55 @@ const HomePage: React.FC = () => {
 
       {/* Two Column Layout */}
       <div className="grid lg:grid-cols-2 gap-8">
-        {/* Left Column - Connection Button and Quick Info */}
+        {/* Left Column - Permission Selection and Connection */}
         <div className="space-y-6">
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">Get Started</h3>
-            <p className="text-gray-600 mb-6">
-              Connect your React application with WordPress using secure OAuth2 authentication.
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">Select Permissions</h3>
+            <p className="text-gray-600 mb-4">
+              Choose which permissions you want to request from WordPress:
             </p>
+
+            <div className="space-y-3 mb-6">
+              {availableScopes.map((scope) => (
+                <label key={scope} className="flex items-start cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedScopes.includes(scope)}
+                    onChange={() => handleScopeToggle(scope)}
+                    className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <div className="ml-3">
+                    <span className="text-sm font-medium text-gray-900 capitalize">
+                      {scope.replace('_', ' ')}
+                    </span>
+                    <p className="text-xs text-gray-500">
+                      {SCOPE_DESCRIPTIONS[scope]}
+                    </p>
+                  </div>
+                </label>
+              ))}
+            </div>
 
             <button
               onClick={handleLogin}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg transition-colors inline-flex items-center justify-center mb-4"
+              disabled={selectedScopes.length === 0}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-lg transition-colors inline-flex items-center justify-center mb-4"
             >
               <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1 15l-4-4 1.41-1.41L11 14.17l6.59-6.59L19 9l-8 8z"/>
               </svg>
-              Connect with WordPress OAuth2
+              Request {selectedScopes.length} Permission{selectedScopes.length !== 1 ? 's' : ''}
             </button>
 
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-start">
-                <svg className="w-5 h-5 text-amber-600 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                <svg className="w-5 h-5 text-blue-600 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                 </svg>
                 <div>
-                  <h4 className="text-sm font-medium text-amber-900">Demo Permissions</h4>
-                  <p className="text-sm text-amber-800">
-                    This app will request: reading content, writing posts, uploading files, and moderating comments.
+                  <h4 className="text-sm font-medium text-blue-900">How It Works</h4>
+                  <p className="text-sm text-blue-800">
+                    WordPress will show you exactly what you're granting and let you approve or deny each permission.
                   </p>
                 </div>
               </div>

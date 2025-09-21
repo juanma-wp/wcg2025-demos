@@ -13,6 +13,9 @@ class Auth_OAuth2 {
     const TOKEN_TTL = 3600;   // 1 hour
     const OPTION_CLIENTS = 'oauth2_clients';
 
+    // Store current token scopes for request validation
+    private array $current_token_scopes = [];
+
     // Available OAuth2 scopes and their descriptions
     const AVAILABLE_SCOPES = [
         'read' => 'View your posts, pages, and profile information',
@@ -242,15 +245,21 @@ class Auth_OAuth2 {
         ob_start();
         ?>
         <!DOCTYPE html>
-        <html lang="en">
+        <html <?php language_attributes(); ?>>
         <head>
-            <meta charset="UTF-8">
+            <meta charset="<?php bloginfo( 'charset' ); ?>">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Authorize <?php echo esc_html($app_name); ?> - <?php echo esc_html($site_name); ?></title>
+            <?php
+            // Load WordPress admin CSS
+            wp_admin_css('login');
+            wp_admin_css('buttons');
+            ?>
             <style>
+                /* WordPress-styled OAuth Consent (Google-inspired layout) */
                 body {
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+                    background: #f6f7f7;
                     margin: 0;
                     padding: 20px;
                     min-height: 100vh;
@@ -258,159 +267,301 @@ class Auth_OAuth2 {
                     align-items: center;
                     justify-content: center;
                 }
-                .consent-container {
-                    background: white;
-                    border-radius: 12px;
-                    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-                    max-width: 500px;
+
+                .oauth-container {
+                    background: #fff;
+                    border: 1px solid #c3c4c7;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,.1);
+                    max-width: 450px;
                     width: 100%;
-                    padding: 0;
-                    overflow: hidden;
+                    padding: 48px 40px 36px;
+                    box-sizing: border-box;
                 }
-                .header {
-                    background: #f8f9fa;
-                    padding: 30px;
-                    text-align: center;
-                    border-bottom: 1px solid #e9ecef;
+
+                .wp-header {
+                    display: flex;
+                    align-items: center;
+                    padding: 0 0 24px;
+                    border-bottom: 1px solid #e0e0e0;
+                    margin-bottom: 32px;
                 }
-                .header h1 {
-                    margin: 0 0 10px 0;
-                    color: #495057;
-                    font-size: 24px;
-                }
-                .app-info {
-                    background: #007cba;
-                    color: white;
-                    padding: 2px 8px;
-                    border-radius: 4px;
+
+                .wp-logo {
+                    width: 24px;
+                    height: 24px;
+                    background: #0073aa;
+                    border-radius: 3px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin-right: 12px;
+                    color: #fff;
+                    font-weight: bold;
                     font-size: 14px;
+                }
+
+                .wp-header-text {
+                    font-size: 16px;
+                    color: #5f6368;
+                    margin: 0;
+                }
+
+                .oauth-title {
+                    font-size: 24px;
+                    color: #1d2327;
+                    margin: 0 0 8px;
+                    font-weight: 400;
+                    line-height: 1.3;
+                }
+
+                .oauth-subtitle {
+                    font-size: 16px;
+                    color: #5f6368;
+                    margin: 0 0 24px;
+                    line-height: 1.5;
+                }
+
+                .user-account {
+                    display: flex;
+                    align-items: center;
+                    padding: 12px;
+                    background: #f8f9fa;
+                    border-radius: 4px;
+                    margin-bottom: 32px;
+                }
+
+                .user-avatar {
+                    width: 32px;
+                    height: 32px;
+                    background: #0073aa;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: #fff;
+                    font-weight: 500;
+                    margin-right: 12px;
+                }
+
+                .user-details {
+                    flex: 1;
+                }
+
+                .user-name {
+                    font-size: 14px;
+                    color: #1d2327;
+                    margin: 0 0 2px;
+                }
+
+                .user-email {
+                    font-size: 12px;
+                    color: #5f6368;
+                    margin: 0;
+                }
+
+                .permissions-intro {
+                    font-size: 14px;
+                    color: #1d2327;
+                    margin: 0 0 20px;
+                    line-height: 1.5;
+                }
+
+                .app-name {
+                    color: #0073aa;
                     font-weight: 500;
                 }
-                .user-info {
-                    color: #6c757d;
-                    font-size: 14px;
-                    margin-top: 10px;
+
+                .permissions-list {
+                    margin-bottom: 32px;
                 }
-                .content {
-                    padding: 30px;
-                }
-                .permissions {
-                    margin: 20px 0;
-                }
-                .permissions h3 {
-                    margin: 0 0 15px 0;
-                    color: #495057;
-                    font-size: 16px;
-                }
+
                 .permission-item {
                     display: flex;
                     align-items: flex-start;
-                    margin-bottom: 12px;
-                    padding: 10px;
-                    background: #f8f9fa;
-                    border-radius: 6px;
-                    border-left: 3px solid #007cba;
+                    padding: 16px 0;
+                    border-bottom: 1px solid #f0f0f0;
                 }
-                .permission-icon {
-                    color: #007cba;
-                    margin-right: 10px;
-                    margin-top: 2px;
+
+                .permission-item:last-child {
+                    border-bottom: none;
                 }
+
+                .permission-bullet {
+                    width: 8px;
+                    height: 8px;
+                    background: #0073aa;
+                    border-radius: 50%;
+                    margin-right: 16px;
+                    margin-top: 6px;
+                    flex-shrink: 0;
+                }
+
                 .permission-text {
-                    flex: 1;
                     font-size: 14px;
-                    color: #495057;
+                    color: #1d2327;
+                    line-height: 1.5;
                 }
-                .actions {
+
+                .trust-section {
+                    background: #f8f9fa;
+                    border-radius: 4px;
+                    padding: 16px;
+                    margin-bottom: 32px;
+                }
+
+                .trust-title {
+                    font-size: 14px;
+                    font-weight: 500;
+                    color: #1d2327;
+                    margin: 0 0 8px;
+                }
+
+                .trust-text {
+                    font-size: 13px;
+                    color: #5f6368;
+                    line-height: 1.4;
+                    margin: 0 0 12px;
+                }
+
+                .trust-link {
+                    color: #0073aa;
+                    text-decoration: none;
+                    font-size: 13px;
+                }
+
+                .trust-link:hover {
+                    text-decoration: underline;
+                }
+
+                .oauth-actions {
                     display: flex;
-                    gap: 15px;
-                    margin-top: 30px;
+                    justify-content: flex-end;
+                    gap: 12px;
+                    padding-top: 16px;
                 }
+
                 .btn {
-                    flex: 1;
-                    padding: 12px 20px;
-                    border: none;
-                    border-radius: 6px;
-                    font-size: 16px;
+                    padding: 8px 24px;
+                    border-radius: 4px;
+                    font-size: 14px;
                     font-weight: 500;
                     cursor: pointer;
-                    transition: all 0.2s;
+                    border: 1px solid;
+                    text-decoration: none;
+                    display: inline-block;
+                    text-align: center;
+                    min-width: 80px;
                 }
-                .btn-approve {
-                    background: #28a745;
-                    color: white;
+
+                .btn-cancel {
+                    background: transparent;
+                    color: #0073aa;
+                    border-color: #c3c4c7;
                 }
-                .btn-approve:hover {
-                    background: #218838;
-                    transform: translateY(-1px);
+
+                .btn-cancel:hover {
+                    background: #f6f7f7;
                 }
-                .btn-deny {
-                    background: #6c757d;
-                    color: white;
+
+                .btn-allow {
+                    background: #0073aa;
+                    color: #fff;
+                    border-color: #0073aa;
                 }
-                .btn-deny:hover {
-                    background: #5a6268;
+
+                .btn-allow:hover {
+                    background: #135e96;
+                    border-color: #135e96;
                 }
-                .security-note {
-                    background: #fff3cd;
-                    border: 1px solid #ffeaa7;
-                    border-radius: 6px;
-                    padding: 15px;
-                    margin-top: 20px;
-                    font-size: 13px;
-                    color: #856404;
-                }
-                .security-note strong {
-                    color: #856404;
+
+                @media screen and (max-width: 480px) {
+                    body {
+                        padding: 16px;
+                    }
+
+                    .oauth-container {
+                        padding: 32px 24px 24px;
+                    }
+
+                    .oauth-actions {
+                        flex-direction: column-reverse;
+                    }
+
+                    .btn {
+                        width: 100%;
+                        margin-bottom: 8px;
+                    }
                 }
             </style>
         </head>
         <body>
-            <div class="consent-container">
-                <div class="header">
-                    <h1>🔐 Authorization Request</h1>
-                    <div class="app-info"><?php echo esc_html($app_name); ?></div>
-                    <div class="user-info">
-                        Signed in as <strong><?php echo esc_html($user_name); ?></strong>
+            <div class="oauth-container">
+                <!-- WordPress Header (similar to Google's "Sign in with Google") -->
+                <div class="wp-header">
+                    <div class="wp-logo">W</div>
+                    <span class="wp-header-text">Sign in with WordPress</span>
+                </div>
+
+                <!-- Main Title -->
+                <h1 class="oauth-title"><?php echo esc_html($app_name); ?> wants to access your WordPress Account</h1>
+
+                <!-- User Account Info -->
+                <div class="user-account">
+                    <div class="user-avatar">
+                        <?php echo strtoupper(substr($user_name, 0, 1)); ?>
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name"><?php echo esc_html($user_name); ?></div>
+                        <div class="user-email"><?php echo esc_html($user->user_email); ?></div>
                     </div>
                 </div>
 
-                <div class="content">
-                    <p><strong><?php echo esc_html($app_name); ?></strong> is requesting access to your <strong><?php echo esc_html($site_name); ?></strong> account.</p>
+                <!-- Permissions Introduction -->
+                <div class="permissions-intro">
+                    This will allow <span class="app-name"><?php echo esc_html($app_name); ?></span> to:
+                </div>
 
-                    <div class="permissions">
-                        <h3>This application would like to:</h3>
-                        <?php foreach ($scopes as $scope): ?>
-                            <div class="permission-item">
-                                <span class="permission-icon"><?php echo $this->get_scope_icon($scope); ?></span>
-                                <span class="permission-text">
-                                    <strong><?php echo esc_html(ucfirst(str_replace('_', ' ', $scope))); ?>:</strong>
-                                    <?php echo esc_html(self::AVAILABLE_SCOPES[$scope]); ?>
-                                </span>
+                <!-- Permissions List -->
+                <div class="permissions-list">
+                    <?php foreach ($scopes as $scope): ?>
+                        <div class="permission-item">
+                            <div class="permission-bullet"></div>
+                            <div class="permission-text">
+                                <?php echo esc_html(self::AVAILABLE_SCOPES[$scope]); ?>
                             </div>
-                        <?php endforeach; ?>
-                    </div>
-
-                    <div class="security-note">
-                        <strong>🛡️ Security Note:</strong> Only approve if you trust this application. You can revoke access at any time from your account settings.
-                    </div>
-
-                    <form method="POST" action="">
-                        <input type="hidden" name="client_id" value="<?php echo esc_attr($client_id); ?>">
-                        <input type="hidden" name="redirect_uri" value="<?php echo esc_attr($redirect_uri); ?>">
-                        <input type="hidden" name="state" value="<?php echo esc_attr($state); ?>">
-                        <input type="hidden" name="scope" value="<?php echo esc_attr(implode(' ', $scopes)); ?>">
-
-                        <div class="actions">
-                            <button type="submit" name="oauth2_consent" value="deny" class="btn btn-deny">
-                                ❌ Deny Access
-                            </button>
-                            <button type="submit" name="oauth2_consent" value="approve" class="btn btn-approve">
-                                ✅ Allow Access
-                            </button>
                         </div>
-                    </form>
+                    <?php endforeach; ?>
                 </div>
+
+                <!-- Trust Section -->
+                <div class="trust-section">
+                    <div class="trust-title">Make sure you trust <?php echo esc_html($app_name); ?></div>
+                    <div class="trust-text">
+                        You may be sharing sensitive info with this site or app.
+                        Learn about how <?php echo esc_html($app_name); ?> will handle your data by
+                        reviewing its terms of service and privacy policies. You can always
+                        see or remove access in your <a href="<?php echo esc_url(admin_url('profile.php')); ?>" class="trust-link">WordPress Account</a>.
+                    </div>
+                    <a href="#" class="trust-link" onclick="return false;">Learn about the risks</a>
+                </div>
+
+                <!-- Actions -->
+                <form method="POST" action="">
+                    <input type="hidden" name="client_id" value="<?php echo esc_attr($client_id); ?>">
+                    <input type="hidden" name="redirect_uri" value="<?php echo esc_attr($redirect_uri); ?>">
+                    <input type="hidden" name="state" value="<?php echo esc_attr($state); ?>">
+                    <input type="hidden" name="scope" value="<?php echo esc_attr(implode(' ', $scopes)); ?>">
+
+                    <div class="oauth-actions">
+                        <button type="submit" name="oauth2_consent" value="deny" class="btn btn-cancel">
+                            Cancel
+                        </button>
+                        <button type="submit" name="oauth2_consent" value="approve" class="btn btn-allow">
+                            Allow
+                        </button>
+                    </div>
+                </form>
             </div>
         </body>
         </html>
@@ -706,6 +857,14 @@ class Auth_OAuth2 {
             );
         }
 
+        // Store token scopes for later scope validation
+        $this->current_token_scopes = $token_data['scopes'] ?? [];
+
+        error_log("OAuth2 Debug: Bearer authentication successful - User ID: {$user->ID}, Token Scopes: " . json_encode($this->current_token_scopes));
+
+        // Add scope validation hook for REST API requests
+        add_filter('rest_pre_dispatch', [$this, 'validate_request_scopes'], 10, 3);
+
         wp_set_current_user($user->ID);
         return true;
     }
@@ -775,5 +934,135 @@ class Auth_OAuth2 {
         }
 
         return in_array($redirect_uri, $client['redirect_uris'], true);
+    }
+
+    /**
+     * Validate that the current OAuth2 token has required scopes for the API request
+     */
+    public function validate_request_scopes($result, $server, $request) {
+        // Skip validation if there's already an error or no token scopes stored
+        if (is_wp_error($result) || empty($this->current_token_scopes)) {
+            return $result;
+        }
+
+        $route = $request->get_route();
+        $method = $request->get_method();
+
+        // Debug logging
+        error_log("OAuth2 Debug: Validating request - Route: {$route}, Method: {$method}, Token Scopes: " . json_encode($this->current_token_scopes));
+
+        // Get required scopes for this endpoint
+        $required_scopes = $this->get_endpoint_required_scopes($route, $method);
+
+        error_log("OAuth2 Debug: Required scopes for {$method} {$route}: " . json_encode($required_scopes));
+
+        if (empty($required_scopes)) {
+            error_log("OAuth2 Debug: No scopes required for this endpoint, allowing access");
+            return $result; // No specific scopes required
+        }
+
+        // Check if token has at least one required scope
+        $has_required_scope = false;
+        foreach ($required_scopes as $required_scope) {
+            if (in_array($required_scope, $this->current_token_scopes)) {
+                $has_required_scope = true;
+                break;
+            }
+        }
+
+        if (!$has_required_scope) {
+            error_log("OAuth2 Debug: Access DENIED - insufficient scope");
+
+            $error_message = sprintf(
+                'Insufficient OAuth2 scope. This %s request to %s requires one of the following scopes: [%s]. Your access token only has: [%s]. Please request additional permissions.',
+                $method,
+                $route,
+                implode(', ', $required_scopes),
+                implode(', ', $this->current_token_scopes ?: ['none'])
+            );
+
+            return new WP_Error(
+                'rest_forbidden_scope',
+                $error_message,
+                [
+                    'status' => 403,
+                    'oauth2_error' => 'insufficient_scope',
+                    'required_scopes' => $required_scopes,
+                    'token_scopes' => $this->current_token_scopes,
+                    'request_method' => $method,
+                    'request_route' => $route,
+                    'help' => 'Re-authenticate with broader scopes or contact the application developer.'
+                ]
+            );
+        }
+
+        error_log("OAuth2 Debug: Access GRANTED - scope validation passed");
+        return $result;
+    }
+
+    /**
+     * Map API endpoints to required OAuth2 scopes
+     */
+    private function get_endpoint_required_scopes(string $route, string $method): array {
+        // WordPress REST API endpoint scope mappings
+        $endpoint_scopes = [
+            // Posts endpoints
+            'GET:/wp/v2/posts' => ['read'],
+            'POST:/wp/v2/posts' => ['write'],
+            'PUT:/wp/v2/posts/*' => ['write'],
+            'PATCH:/wp/v2/posts/*' => ['write'],
+            'DELETE:/wp/v2/posts/*' => ['delete'],
+
+            // User endpoints
+            'GET:/wp/v2/users' => ['read'],
+            'GET:/wp/v2/users/*' => ['read'],
+            'GET:/wp/v2/users/me' => ['read'],
+            'POST:/wp/v2/users' => ['manage_users'],
+            'PUT:/wp/v2/users/*' => ['manage_users'],
+            'DELETE:/wp/v2/users/*' => ['manage_users'],
+
+            // Media endpoints - reading media info should only require 'read'
+            'GET:/wp/v2/media' => ['read'],
+            'GET:/wp/v2/media/*' => ['read'],
+            'POST:/wp/v2/media' => ['upload_files'],
+            'PUT:/wp/v2/media/*' => ['upload_files'],
+            'DELETE:/wp/v2/media/*' => ['upload_files'],
+
+            // Comments endpoints
+            'GET:/wp/v2/comments' => ['read'],
+            'POST:/wp/v2/comments' => ['moderate_comments'],
+            'PUT:/wp/v2/comments/*' => ['moderate_comments'],
+            'DELETE:/wp/v2/comments/*' => ['moderate_comments'],
+
+            // Categories/Tags endpoints
+            'GET:/wp/v2/categories' => ['read'],
+            'POST:/wp/v2/categories' => ['manage_categories'],
+            'PUT:/wp/v2/categories/*' => ['manage_categories'],
+            'DELETE:/wp/v2/categories/*' => ['manage_categories'],
+
+            'GET:/wp/v2/tags' => ['read'],
+            'POST:/wp/v2/tags' => ['manage_categories'],
+            'PUT:/wp/v2/tags/*' => ['manage_categories'],
+            'DELETE:/wp/v2/tags/*' => ['manage_categories'],
+        ];
+
+        $route_pattern = $method . ':' . $route;
+
+        // Try exact match first
+        if (isset($endpoint_scopes[$route_pattern])) {
+            return $endpoint_scopes[$route_pattern];
+        }
+
+        // Try wildcard matches for routes with IDs
+        foreach ($endpoint_scopes as $pattern => $scopes) {
+            if (strpos($pattern, '*') !== false) {
+                $regex_pattern = str_replace(['*', '/'], ['[^/]+', '\/'], $pattern);
+                if (preg_match('/^' . $regex_pattern . '$/', $route_pattern)) {
+                    return $scopes;
+                }
+            }
+        }
+
+        return []; // No specific scopes required
     }
 }
