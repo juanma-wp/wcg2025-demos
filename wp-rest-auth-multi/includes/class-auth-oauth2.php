@@ -860,7 +860,10 @@ class Auth_OAuth2 {
         // Store token scopes for later scope validation
         $this->current_token_scopes = $token_data['scopes'] ?? [];
 
-        error_log("OAuth2 Debug: Bearer authentication successful - User ID: {$user->ID}, Token Scopes: " . json_encode($this->current_token_scopes));
+        $this->debug_log("Bearer authentication successful", [
+            'user_id' => $user->ID,
+            'token_scopes' => $this->current_token_scopes
+        ]);
 
         // Add scope validation hook for REST API requests
         add_filter('rest_pre_dispatch', [$this, 'validate_request_scopes'], 10, 3);
@@ -874,8 +877,17 @@ class Auth_OAuth2 {
             return null;
         }
 
-        $clients = get_option(self::OPTION_CLIENTS, []);
-        return $clients[$client_id] ?? null;
+        // First try to get clients from admin settings
+        $oauth2_settings = WP_REST_Auth_Multi_Admin_Settings::get_oauth2_settings();
+        $clients = $oauth2_settings['clients'] ?? [];
+
+        if (isset($clients[$client_id])) {
+            return $clients[$client_id];
+        }
+
+        // Fallback to old option for backward compatibility
+        $old_clients = get_option(self::OPTION_CLIENTS, []);
+        return $old_clients[$client_id] ?? null;
     }
 
     private function code_key(string $code): string {
@@ -884,6 +896,18 @@ class Auth_OAuth2 {
 
     private function token_key(string $token): string {
         return 'oauth2_token_' . md5($token);
+    }
+
+    private function debug_log(string $message, $data = null) {
+        $general_settings = WP_REST_Auth_Multi_Admin_Settings::get_general_settings();
+
+        if ($general_settings['enable_debug_logging']) {
+            $log_message = "OAuth2 Debug: " . $message;
+            if ($data !== null) {
+                $log_message .= " - " . json_encode($data);
+            }
+            error_log($log_message);
+        }
     }
 
     private function oauth_error_redirect(string $redirect_uri = null, string $error = 'invalid_request', string $state = null) {
@@ -949,15 +973,23 @@ class Auth_OAuth2 {
         $method = $request->get_method();
 
         // Debug logging
-        error_log("OAuth2 Debug: Validating request - Route: {$route}, Method: {$method}, Token Scopes: " . json_encode($this->current_token_scopes));
+        $this->debug_log("Validating request", [
+            'route' => $route,
+            'method' => $method,
+            'token_scopes' => $this->current_token_scopes
+        ]);
 
         // Get required scopes for this endpoint
         $required_scopes = $this->get_endpoint_required_scopes($route, $method);
 
-        error_log("OAuth2 Debug: Required scopes for {$method} {$route}: " . json_encode($required_scopes));
+        $this->debug_log("Required scopes determined", [
+            'method' => $method,
+            'route' => $route,
+            'required_scopes' => $required_scopes
+        ]);
 
         if (empty($required_scopes)) {
-            error_log("OAuth2 Debug: No scopes required for this endpoint, allowing access");
+            $this->debug_log("No scopes required for this endpoint, allowing access");
             return $result; // No specific scopes required
         }
 
@@ -971,7 +1003,7 @@ class Auth_OAuth2 {
         }
 
         if (!$has_required_scope) {
-            error_log("OAuth2 Debug: Access DENIED - insufficient scope");
+            $this->debug_log("Access DENIED - insufficient scope");
 
             $error_message = sprintf(
                 'Insufficient OAuth2 scope. This %s request to %s requires one of the following scopes: [%s]. Your access token only has: [%s]. Please request additional permissions.',

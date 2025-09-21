@@ -21,6 +21,7 @@ class WP_REST_Auth_Multi {
 
     private $auth_jwt;
     private $auth_oauth2;
+    private $admin_settings;
 
     public function __construct() {
         add_action('plugins_loaded', [$this, 'init']);
@@ -29,32 +30,51 @@ class WP_REST_Auth_Multi {
     }
 
     public function init() {
-        // Check if required constants are defined
-        if (!defined('WP_JWT_AUTH_SECRET')) {
-            add_action('admin_notices', [$this, 'missing_config_notice']);
-            return;
-        }
-
-        // Set default constants if not defined
-        if (!defined('WP_JWT_ACCESS_TTL')) {
-            define('WP_JWT_ACCESS_TTL', 900); // 15 minutes
-        }
-
-        if (!defined('WP_JWT_REFRESH_TTL')) {
-            define('WP_JWT_REFRESH_TTL', 1209600); // 14 days
-        }
-
         $this->load_dependencies();
+        $this->setup_constants();
         $this->init_hooks();
     }
 
     private function load_dependencies() {
         require_once WP_REST_AUTH_MULTI_PLUGIN_DIR . 'includes/helpers.php';
+        require_once WP_REST_AUTH_MULTI_PLUGIN_DIR . 'includes/class-admin-settings.php';
         require_once WP_REST_AUTH_MULTI_PLUGIN_DIR . 'includes/class-auth-jwt.php';
         require_once WP_REST_AUTH_MULTI_PLUGIN_DIR . 'includes/class-auth-oauth2.php';
 
+        // Initialize admin settings
+        if (is_admin()) {
+            $this->admin_settings = new WP_REST_Auth_Multi_Admin_Settings();
+        }
+
         $this->auth_jwt = new Auth_JWT();
         $this->auth_oauth2 = new Auth_OAuth2();
+    }
+
+    private function setup_constants() {
+        $jwt_settings = WP_REST_Auth_Multi_Admin_Settings::get_jwt_settings();
+
+        // Setup JWT constants from admin settings or fallback to wp-config.php
+        if (!defined('WP_JWT_AUTH_SECRET')) {
+            $secret = $jwt_settings['secret_key'] ?? '';
+            if (!empty($secret)) {
+                define('WP_JWT_AUTH_SECRET', $secret);
+            } else {
+                // Check if it's defined in wp-config.php as fallback
+                if (!defined('WP_JWT_AUTH_SECRET')) {
+                    add_action('admin_notices', [$this, 'missing_config_notice']);
+                    return;
+                }
+            }
+        }
+
+        // Set token expiration times from admin settings
+        if (!defined('WP_JWT_ACCESS_TTL')) {
+            define('WP_JWT_ACCESS_TTL', $jwt_settings['access_token_expiry'] ?? 3600);
+        }
+
+        if (!defined('WP_JWT_REFRESH_TTL')) {
+            define('WP_JWT_REFRESH_TTL', $jwt_settings['refresh_token_expiry'] ?? 2592000);
+        }
     }
 
     private function init_hooks() {
@@ -168,9 +188,11 @@ class WP_REST_Auth_Multi {
     }
 
     public function missing_config_notice() {
+        $settings_url = admin_url('options-general.php?page=wp-rest-auth-multi');
         echo '<div class="notice notice-error"><p>';
-        echo '<strong>WP REST Multi Auth:</strong> Please define WP_JWT_AUTH_SECRET in your wp-config.php file. ';
-        echo 'Add this line: <code>define(\'WP_JWT_AUTH_SECRET\', \'your-very-long-and-random-secret-key\');</code>';
+        echo '<strong>WP REST Multi Auth:</strong> JWT Secret Key is required for the plugin to work. ';
+        echo '<a href="' . esc_url($settings_url) . '">Configure it in the plugin settings</a> ';
+        echo 'or define <code>WP_JWT_AUTH_SECRET</code> in your wp-config.php file.';
         echo '</p></div>';
     }
 
