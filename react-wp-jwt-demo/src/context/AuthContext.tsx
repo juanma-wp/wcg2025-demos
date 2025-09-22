@@ -172,7 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const attemptSilentLogin = async () => {
       try {
         console.log('🔍 JWT Debug - Attempting silent login on app load...')
-        console.log('🔍 JWT Debug - Auth server URL:', import.meta.env.VITE_AUTH_SERVER_URL || 'http://localhost:3001')
+        console.log('🔍 JWT Debug - WordPress URL:', import.meta.env.VITE_WP_BASE_URL || 'https://wcg2025-demo.wp.local/')
 
         const response = await Auth.refresh()
         console.log('🔍 JWT Debug - Refresh response:', response)

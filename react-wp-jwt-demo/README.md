@@ -1,13 +1,13 @@
 # React WordPress JWT Demo
 
-A modern React application demonstrating secure JWT authentication with WordPress REST API using a hybrid approach: access tokens in memory + refresh tokens in HttpOnly cookies via an Express auth server.
+A modern React application demonstrating secure JWT authentication directly with WordPress REST API using the wp-rest-auth-multi plugin. Features access tokens in memory and refresh tokens handled by WordPress.
 
 ## 🚀 Features
 
-- **🔐 Secure JWT Authentication**: Hybrid approach with Express auth server
-- **🔄 Automatic Token Refresh**: Silent re-authentication on page load
-- **🛡️ XSS Protection**: Access tokens in memory, refresh tokens in HttpOnly cookies
-- **🗄️ WordPress API Proxy**: Secure WordPress REST API integration
+- **🔐 Direct WordPress JWT Authentication**: No proxy server required
+- **🔄 Automatic Token Refresh**: Silent re-authentication via WordPress endpoints
+- **🛡️ XSS Protection**: Access tokens in memory, refresh tokens managed by WordPress
+- **🗄️ WordPress REST API**: Direct integration with WordPress REST API
 - **⚛️ React Router**: Protected routes with authentication guards
 - **💅 Modern UI**: Tailwind CSS with responsive design
 - **📝 TypeScript**: Full type safety and IntelliSense
@@ -24,13 +24,10 @@ Before running this project, ensure you have the following installed:
 
 ### WordPress Setup
 
-1. **Install JWT Plugin**: Install a WordPress JWT plugin like:
-   - [wp-rest-auth-multi](https://github.com/juanma-wp/wcg2025-demos/tree/main/wp-rest-auth-multi) (recommended)
-   - [JWT Authentication for WP REST API](https://wordpress.org/plugins/jwt-authentication-for-wp-rest-api/)
+1. **Install JWT Plugin**: This demo is designed to work with:
+   - [wp-rest-auth-multi](https://github.com/juanma-wp/wp-rest-auth-multi) (required)
 
-2. **Configure Plugin**: Set up your chosen plugin's endpoints in the auth server's `.env` file
-
-3. **WordPress Config**: Add JWT secret to `wp-config.php` (`wp-rest-auth-multi` plugin):
+2. **WordPress Config**: Add JWT secret to `wp-config.php` (`wp-rest-auth-multi` plugin):
    ```php
    define('WP_JWT_AUTH_SECRET', 'your-very-long-and-random-secret-key-here');
    define('WP_JWT_ACCESS_TTL', 900);     // 15 minutes (optional)
@@ -44,60 +41,44 @@ Before running this project, ensure you have the following installed:
 ```bash
 # Install React app dependencies
 npm install
-
-# Install auth server dependencies
-cd server && npm install
 ```
 
 ### 2. Configure Environment
 
-**React App**: Copy and configure the client environment:
+Copy and configure the environment variables:
 ```bash
 cp .env.example .env.local
-# Edit with your WordPress URL and auth server URL
-```
-
-**Auth Server**: Copy and configure the server environment:
-```bash
-cd server
-cp .env.example .env
-# Edit with your WordPress JWT plugin endpoints and secrets
+# Edit with your WordPress URL and JWT plugin configuration
 ```
 
 ### 3. Environment Variables
 
 **React App (`.env.local`)**:
 ```env
-VITE_AUTH_SERVER_URL=http://localhost:3001
-VITE_WP_BASE_URL=https://your-wordpress-site.com
-VITE_DEBUG=true
-```
+# WordPress Configuration
+VITE_WP_BASE_URL=https://your-wordpress-site.com/
+VITE_WP_API_NAMESPACE=wp-json
+VITE_WP_JWT_NAMESPACE=jwt/v1
 
-**Auth Server (`server/.env`)**:
-```env
-WP_BASE_URL=https://your-wordpress-site.com/
-WP_JWT_NAMESPACE=jwt/v1
-ACCESS_TOKEN_SECRET=your-secure-random-secret
-REFRESH_TOKEN_SECRET=your-secure-random-secret
-CLIENT_URL=http://localhost:5173
-DEBUG=true
-SSL_VERIFY=false  # For local development only
+# WordPress JWT Endpoints (wp-rest-auth-multi plugin)
+VITE_WP_JWT_TOKEN_ENDPOINT=/token
+VITE_WP_JWT_REFRESH_ENDPOINT=/refresh
+VITE_WP_JWT_VERIFY_ENDPOINT=/verify
+VITE_WP_JWT_LOGOUT_ENDPOINT=/logout
+
+# Debug
+VITE_DEBUG=true
 ```
 
 ## 🚀 Running the Project
 
-Start both services in separate terminals:
+Start the React development server:
 
 ```bash
-# Terminal 1: Start auth server
-cd server && npm run dev
-
-# Terminal 2: Start React app
 npm run dev
 ```
 
 - **React App**: http://localhost:5173
-- **Auth Server**: http://localhost:3001
 
 For production deployment, see [DEPLOYMENT.md](./DEPLOYMENT.md)
 
@@ -107,7 +88,7 @@ For production deployment, see [DEPLOYMENT.md](./DEPLOYMENT.md)
 react-wp-jwt-demo/
 ├── src/                    # React app source
 │   ├── api/               # API layer
-│   │   ├── auth.ts       # Auth server API calls
+│   │   ├── auth.ts       # WordPress JWT authentication API
 │   │   └── wp.ts         # WordPress REST API calls
 │   ├── components/       # Reusable UI components
 │   │   ├── LoginForm.tsx # Login form component
@@ -125,12 +106,8 @@ react-wp-jwt-demo/
 │   │   └── jwt-debug.ts # JWT debugging utilities
 │   ├── App.tsx         # Main app component
 │   ├── main.tsx       # App entry point
-│   └── routes.tsx     # Route definitions
-├── server/            # Auth server
-│   ├── server.js      # Express server with JWT handling
-│   ├── package.json   # Server dependencies
-│   ├── .env.example   # Environment template
-│   └── README.md      # Server documentation
+│   ├── routes.tsx     # Route definitions
+│   └── vite-env.d.ts  # TypeScript environment definitions
 └── package.json       # React app dependencies
 ```
 
@@ -147,12 +124,12 @@ graph TD
     D --> G[Publish Page - Protected]
 
     C --> H[LoginForm]
-    H --> I[Auth Server API]
-    I --> J[Express Auth Server]
-    J --> K[WordPress JWT Endpoint]
+    H --> I[WordPress Auth API]
+    I --> J[WordPress JWT Plugin]
+    J --> K[wp-rest-auth-multi Plugin]
 
     B --> L[Memory Access Token]
-    J --> M[HttpOnly Cookie - Refresh Token]
+    K --> M[WordPress Refresh Token]
     B --> N[Auto Refresh Logic]
     B --> O[JWT Debug Utils]
 
@@ -164,7 +141,7 @@ graph TD
     style G fill:#ffe6e6
     style P fill:#e6f3ff
     style B fill:#e6ffe6
-    style J fill:#fff2e6
+    style K fill:#fff2e6
     style L fill:#e6ffe6
     style M fill:#ffe6f2
 ```
@@ -179,54 +156,50 @@ graph TD
 - **Ky** - Modern HTTP client
 - **PostCSS & Autoprefixer** - CSS processing
 
-### Backend (Auth Server)
-- **Node.js** - Runtime
-- **Express.js** - Web framework
-- **jsonwebtoken** - JWT creation and verification
-- **cookie-parser** - Cookie handling middleware
+### Backend (WordPress)
+- **WordPress** - Content management system
+- **wp-rest-auth-multi Plugin** - JWT authentication
+- **WordPress REST API** - Standard WordPress API
 - **cors** - Cross-origin resource sharing
 - **ky** - HTTP client for WordPress API calls
 
 ## 🔐 Architecture Overview
 
-This demo uses a **3-tier security architecture**:
+This demo uses a **direct WordPress integration architecture**:
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   React App     │    │  Express Auth   │    │   WordPress     │
-│  (Frontend UI)  │◄──►│     Server      │◄──►│   REST API      │
-│                 │    │  (JWT Handler)  │    │ (Content + Auth)│
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-   Memory Storage        HttpOnly Cookies       JWT Plugin
-   (Access Tokens)      (Refresh Tokens)       (User Auth)
+┌─────────────────┐                        ┌─────────────────┐
+│   React App     │◄──────────────────────►│   WordPress     │
+│  (Frontend UI)  │                        │   REST API      │
+│                 │                        │ (Content + Auth)│
+└─────────────────┘                        └─────────────────┘
+   Memory Storage                             JWT Plugin
+   (Access Tokens)                         (User Auth + Refresh)
 ```
 
 ### 🔄 Authentication Flow
 
-1. **Login**: User → Auth Server → WordPress → Tokens generated
-2. **Storage**: Access token (memory) + Refresh token (HttpOnly cookie)
-3. **API Calls**: React App → Auth Server (proxy) → WordPress API
-4. **Auto Refresh**: Silent token renewal on page load using refresh cookie
-5. **Logout**: Clear all tokens and invalidate session
+1. **Login**: User → WordPress JWT Plugin → Tokens generated
+2. **Storage**: Access token (memory) + Refresh token (WordPress managed)
+3. **API Calls**: React App → WordPress REST API (direct)
+4. **Auto Refresh**: Silent token renewal using WordPress refresh endpoint
+5. **Logout**: Clear tokens via WordPress logout endpoint
 
 ### 🛡️ Security Features
 
-- **XSS Protection**: Tokens not in localStorage
-- **Session Persistence**: HttpOnly cookies survive refreshes
-- **CSRF Protection**: SameSite cookie attributes
-- **Auto Recovery**: Silent login on app restart
-- **Proxy Pattern**: WordPress never exposed to frontend
+- **XSS Protection**: Access tokens stored in memory only
+- **Session Persistence**: WordPress handles refresh token management
+- **CSRF Protection**: WordPress built-in CSRF protection
+- **Auto Recovery**: Silent login on app restart via WordPress refresh
+- **Direct Integration**: No proxy server required
 
 ## 🐛 Debugging
 
-Enable debugging in both environments:
+Enable debugging in your React app environment:
 
 ```env
 # React App
 VITE_DEBUG=true
-
-# Auth Server
-DEBUG=true
 ```
 
 Check browser console for `🔍 JWT Debug` messages covering:
@@ -238,14 +211,43 @@ Check browser console for `🔍 JWT Debug` messages covering:
 ## 🚨 Troubleshooting
 
 **Login fails**: Check WordPress credentials and JWT plugin configuration
-**CORS errors**: Ensure auth server CORS allows your React app domain
-**Session lost**: Verify refresh token cookies are being set and sent
+**CORS errors**: The wp-rest-auth-multi plugin should handle CORS automatically
+**Session lost**: Verify WordPress refresh token handling is working
 **API errors**: Check WordPress JWT plugin endpoints and SSL certificates
+
+## ✨ Simplified Implementation
+
+This demo has been optimized to work seamlessly with the latest version of `wp-rest-auth-multi`:
+
+### What's Simplified:
+- **✅ Standardized API responses** - No more complex field mapping
+- **✅ Built-in refresh token handling** - Plugin manages HttpOnly cookies automatically
+- **✅ Unified user profile endpoint** - Uses plugin's `/verify` endpoint instead of separate WordPress API calls
+- **✅ Streamlined authentication flow** - Direct plugin integration without workarounds
+
+### Code Comparison:
+```javascript
+// Before: Complex field mapping
+const userPayload = {
+  id: String(res.user?.id || res.user_id || res.ID || ''),
+  email: res.user?.email || res.user_email || '',
+  // ...
+}
+
+// Now: Direct plugin response
+return {
+  access_token: res.access_token,
+  user: {
+    id: String(res.user.id),
+    email: res.user.email,
+    // ...
+  }
+}
+```
 
 ## 📚 Additional Documentation
 
 - **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Production deployment guide
-- **[server/README.md](./server/README.md)** - Auth server documentation
 
 ## 🤝 Contributing
 

@@ -1,5 +1,7 @@
 import { makeClient } from '../lib/http'
-import { decodeJwtPayload } from '../utils/jwt-debug'
+
+// WordPress configuration from environment variables
+const WP_BASE_URL = import.meta.env.VITE_WP_BASE_URL || 'https://wcg2025-demo.wp.local/'
 
 export type WpUser = {
   id: number
@@ -24,13 +26,17 @@ export type WpPost = {
 }
 
 export function wpApi(getAccessToken: () => string | null) {
-  // Use auth server proxy instead of calling WordPress directly
-  const AUTH_SERVER_URL = import.meta.env.VITE_AUTH_SERVER_URL || 'http://localhost:3001'
-  const http = makeClient(AUTH_SERVER_URL, getAccessToken)
+  // Connect directly to WordPress REST API
+  const http = makeClient(WP_BASE_URL.replace(/\/$/, ''), getAccessToken)
 
   return {
-    me: () => http.get('api/wp/wp/v2/users/me', { searchParams: { context: 'edit' } }).json<WpUser>(),
+    me: () => http.get('wp-json/wp/v2/users/me', {
+      searchParams: { context: 'edit' }
+    }).json<WpUser>(),
+
     createPost: (payload: { title: string; content: string; status: 'draft' | 'publish' }) =>
-      http.post('api/wp/wp/v2/posts', { json: payload }).json<WpPost>(),
+      http.post('wp-json/wp/v2/posts', {
+        json: payload
+      }).json<WpPost>(),
   }
 }
