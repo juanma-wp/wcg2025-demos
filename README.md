@@ -1,10 +1,11 @@
 # WordPress REST API Authentication Demos
 
-This repository contains three related projects that demonstrate different authentication methods with WordPress REST API:
+This repository contains React demo applications that demonstrate different authentication methods with WordPress REST API:
 
-1. **wp-rest-auth-multi** - WordPress plugin that enables JWT and OAuth2 authentication
-2. **react-wp-oauth-demo** - React demo showcasing OAuth2 Authorization Code flow
-3. **react-wp-jwt-demo** - React demo showcasing JWT authentication with production deployment
+1. **react-wp-oauth-demo** - React demo showcasing OAuth2 Authorization Code flow
+2. **react-wp-jwt-demo** - React demo showcasing JWT authentication with production deployment
+
+> **📦 Required Plugin:** These demos work with the [wp-rest-auth-multi](https://github.com/juanma-wp/wp-rest-auth-multi) WordPress plugin (separate repository).
 
 ## 🔧 Prerequisites
 
@@ -17,90 +18,34 @@ This repository contains three related projects that demonstrate different authe
 
 ```
 wcg2025-demos/
-├── wp-rest-auth-multi/          # WordPress Plugin
 ├── react-wp-oauth-demo/         # OAuth2 Demo App
 ├── react-wp-jwt-demo/           # JWT Demo App
 └── README.md                    # This file
 ```
 
----
+## 🔌 WordPress Plugin Required
 
-## 🔌 1. WordPress Plugin: `wp-rest-auth-multi`
+These demos require the **[wp-rest-auth-multi](https://github.com/juanma-wp/wp-rest-auth-multi)** WordPress plugin to function properly.
 
-A comprehensive WordPress plugin that adds JWT and OAuth2 authentication capabilities to the WordPress REST API.
-
-### Features
+### Plugin Features
 
 - **JWT Authentication** with access/refresh token support
 - **OAuth2 Authorization Code Flow** with PKCE
 - **Scope-based permissions** (read, write, delete, upload_files, etc.)
 - **User consent screens** with WordPress-styled UI
 - **Comprehensive security** with proper token validation
-- **Debug logging** for development
+- **CORS support** for React applications
 
-### Installation
+### Quick Setup
 
-1. Copy the plugin folder to your WordPress plugins directory:
-   ```bash
-   cp -r wp-rest-auth-multi/ /path/to/wordpress/wp-content/plugins/
-   ```
-
-2. Activate the plugin in WordPress admin:
-   - Go to **Plugins** → **Installed Plugins**
-   - Find "WP REST Auth Multi" and click **Activate**
-
-3. Configure the plugin:
-   - Go to **Settings** → **WP REST Auth Multi**
-   - **JWT Settings Tab**: Configure JWT secret key and token expiration times
-   - **OAuth2 Settings Tab**: Add OAuth2 clients with their redirect URIs
-   - **General Settings Tab**: Enable debug logging and set CORS origins
-   - **Help & Documentation Tab**: View endpoint documentation and troubleshooting tips
-
-### Plugin Configuration
-
-The plugin includes a comprehensive admin settings page with four tabs:
-
-#### JWT Settings Tab
-- **JWT Secret Key**: Generate a secure random key or enter your own (minimum 32 characters)
-- **Access Token Expiry**: How long access tokens remain valid (300-86400 seconds)
-- **Refresh Token Expiry**: How long refresh tokens remain valid (3600-31536000 seconds)
-
-#### OAuth2 Settings Tab
-- **Add OAuth2 Clients**: Create clients with unique Client IDs and redirect URIs
-- **Client Management**: View, edit, and delete existing OAuth2 clients
-- **Redirect URI Validation**: Automatic validation of redirect URIs
-
-#### General Settings Tab
-- **Debug Logging**: Enable/disable detailed authentication logging
-- **CORS Settings**: Configure allowed origins for cross-origin requests
-
-#### Help & Documentation Tab
-- **API Endpoints**: Complete documentation of available endpoints
-- **OAuth2 Scopes**: List of available scopes and their permissions
-- **Troubleshooting**: Common issues and solutions
-
-### Requirements
-
-- WordPress 5.0 or higher
-- PHP 7.4 or higher
-- `openssl` extension enabled
-
-### Testing
-
-The plugin includes comprehensive PHPUnit tests using wp-env:
-
-```bash
-cd wp-rest-auth-multi
-npm install && composer install
-npm run env:start
-npm run test
-```
-
-See [tests/README.md](wp-rest-auth-multi/tests/README.md) for detailed testing documentation.
+1. Install the plugin from: https://github.com/juanma-wp/wp-rest-auth-multi
+2. Activate it in WordPress admin
+3. Configure JWT secret and OAuth2 clients
+4. Set up the React demos below
 
 ---
 
-## 🚀 2. OAuth2 Demo: `react-wp-oauth-demo`
+## 🚀 1. OAuth2 Demo: `react-wp-oauth-demo`
 
 A complete React application demonstrating OAuth2 Authorization Code flow with WordPress, featuring interactive API testing and scope-based permissions.
 
@@ -163,7 +108,7 @@ A complete React application demonstrating OAuth2 Authorization Code flow with W
 
 ---
 
-## 🔐 3. JWT Demo: `react-wp-jwt-demo`
+## 🔐 2. JWT Demo: `react-wp-jwt-demo`
 
 A React application demonstrating JWT authentication with WordPress, including production deployment capabilities.
 
@@ -224,7 +169,7 @@ The JWT demo includes production deployment configurations:
 
 ```mermaid
 graph TD
-    A[wp-rest-auth-multi Plugin] --> B[WordPress REST API]
+    A[wp-rest-auth-multi Plugin<br/>External Repository] --> B[WordPress REST API]
     B --> C[react-wp-oauth-demo]
     B --> D[react-wp-jwt-demo]
 
@@ -237,14 +182,15 @@ graph TD
 
 ## 📋 Setup Order
 
-1. **First**: Install and activate the `wp-rest-auth-multi` plugin in WordPress
+1. **First**: Install the [wp-rest-auth-multi](https://github.com/juanma-wp/wp-rest-auth-multi) plugin in WordPress
 2. **Second**: Configure the plugin settings (JWT secret, OAuth2 clients)
 3. **Third**: Set up either or both React demo applications
 4. **Fourth**: Configure the demo apps to point to your WordPress installation
 
 ## 🛠️ Development Tips
 
-### WordPress Plugin Development
+### WordPress Plugin
+- Install wp-rest-auth-multi from: https://github.com/juanma-wp/wp-rest-auth-multi
 - Enable WordPress debug logging: `define('WP_DEBUG_LOG', true);`
 - Check logs at: `wp-content/debug.log`
 - Use the plugin's debug mode for OAuth2 troubleshooting
