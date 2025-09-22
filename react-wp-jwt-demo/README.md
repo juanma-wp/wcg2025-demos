@@ -1,6 +1,8 @@
 # React WordPress JWT Demo
 
-A modern React application demonstrating secure JWT authentication directly with WordPress REST API using the wp-rest-auth-multi plugin. Features access tokens in memory and refresh tokens handled by WordPress.
+A modern React application demonstrating secure JWT authentication directly with WordPress REST API using the [wp-rest-auth-multi](https://github.com/juanma-wp/wp-rest-auth-multi) plugin. Features access tokens in memory and refresh tokens handled by WordPress.
+
+> **⚠️ Important:** This demo is specifically designed to work with the [wp-rest-auth-multi](https://github.com/juanma-wp/wp-rest-auth-multi) WordPress plugin. Other JWT plugins may not work without modifications.
 
 ## 🚀 Features
 
@@ -24,10 +26,12 @@ Before running this project, ensure you have the following installed:
 
 ### WordPress Setup
 
-1. **Install JWT Plugin**: This demo is designed to work with:
-   - [wp-rest-auth-multi](https://github.com/juanma-wp/wp-rest-auth-multi) (required)
+1. **Install Required Plugin**: This demo requires the following WordPress plugin:
+   - **[wp-rest-auth-multi](https://github.com/juanma-wp/wp-rest-auth-multi)** (mandatory)
 
-2. **WordPress Config**: Add JWT secret to `wp-config.php` (`wp-rest-auth-multi` plugin):
+   > **Note:** This demo uses specific response formats and endpoints from wp-rest-auth-multi. Other JWT plugins will require code modifications.
+
+2. **WordPress Config**: Add JWT secret to `wp-config.php` (required by wp-rest-auth-multi):
    ```php
    define('WP_JWT_AUTH_SECRET', 'your-very-long-and-random-secret-key-here');
    define('WP_JWT_ACCESS_TTL', 900);     // 15 minutes (optional)
@@ -215,34 +219,40 @@ Check browser console for `🔍 JWT Debug` messages covering:
 **Session lost**: Verify WordPress refresh token handling is working
 **API errors**: Check WordPress JWT plugin endpoints and SSL certificates
 
-## ✨ Simplified Implementation
+## ✨ Plugin Integration
 
-This demo has been optimized to work seamlessly with the latest version of `wp-rest-auth-multi`:
+This demo has been specifically optimized to work with the [wp-rest-auth-multi](https://github.com/juanma-wp/wp-rest-auth-multi) plugin:
 
-### What's Simplified:
-- **✅ Standardized API responses** - No more complex field mapping
+### Plugin-Specific Features Used:
+- **✅ Standardized response format** - Uses wp-rest-auth-multi's `{success, data, message}` structure
 - **✅ Built-in refresh token handling** - Plugin manages HttpOnly cookies automatically
-- **✅ Unified user profile endpoint** - Uses plugin's `/verify` endpoint instead of separate WordPress API calls
-- **✅ Streamlined authentication flow** - Direct plugin integration without workarounds
+- **✅ JWT verify endpoint** - Uses `/wp-json/jwt/v1/verify` for user profile data
+- **✅ CORS support** - Plugin handles cross-origin requests (when configured)
+- **✅ Secure cookie management** - Automatic refresh token handling via secure cookies
 
-### Code Comparison:
+### wp-rest-auth-multi Response Format:
 ```javascript
-// Before: Complex field mapping
-const userPayload = {
-  id: String(res.user?.id || res.user_id || res.ID || ''),
-  email: res.user?.email || res.user_email || '',
-  // ...
+// Plugin returns standardized format:
+{
+  "success": true,
+  "data": {
+    "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+    "token_type": "Bearer",
+    "expires_in": 900,
+    "user": {
+      "id": 1,
+      "username": "admin",
+      "email": "admin@example.com",
+      "roles": ["administrator"]
+    }
+  },
+  "message": "Login successful"
 }
 
-// Now: Direct plugin response
-return {
-  access_token: res.access_token,
-  user: {
-    id: String(res.user.id),
-    email: res.user.email,
-    // ...
-  }
-}
+// React code simply accesses:
+const data = res.data;
+const token = data.access_token;
+const user = data.user;
 ```
 
 ## 📚 Additional Documentation
