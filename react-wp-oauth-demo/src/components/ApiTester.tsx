@@ -16,7 +16,7 @@ const apiActions: ApiAction[] = [
   {
     id: 'read-posts',
     name: 'Read Posts',
-    description: 'Fetch a list of published posts',
+    description: 'Fetch a list of published posts - basic content reading',
     method: 'GET',
     endpoint: '/wp-json/wp/v2/posts?per_page=3',
     requiredScope: 'read'
@@ -24,15 +24,31 @@ const apiActions: ApiAction[] = [
   {
     id: 'read-user',
     name: 'Read User Profile',
-    description: 'Get current user information',
+    description: 'Get current user information - personal data reading',
     method: 'GET',
     endpoint: '/wp-json/wp/v2/users/me',
     requiredScope: 'read'
   },
   {
+    id: 'read-media',
+    name: 'Read Media Library',
+    description: 'View media files list - the "read" scope includes all content types',
+    method: 'GET',
+    endpoint: '/wp-json/wp/v2/media?per_page=3',
+    requiredScope: 'read'
+  },
+  {
+    id: 'read-comments',
+    name: 'Read Comments',
+    description: 'View comments list - reading content, not moderating',
+    method: 'GET',
+    endpoint: '/wp-json/wp/v2/comments?per_page=5',
+    requiredScope: 'read'
+  },
+  {
     id: 'create-post',
     name: 'Create Post',
-    description: 'Create a new blog post',
+    description: 'Create a new blog post - requires content creation permission',
     method: 'POST',
     endpoint: '/wp-json/wp/v2/posts',
     requiredScope: 'write',
@@ -44,24 +60,32 @@ const apiActions: ApiAction[] = [
   },
   {
     id: 'upload-media',
-    name: 'Upload Media Info',
-    description: 'Get media upload information',
-    method: 'GET',
-    endpoint: '/wp-json/wp/v2/media?per_page=3',
-    requiredScope: 'upload_files'
+    name: 'Upload Media (Simulation)',
+    description: 'Upload a media file - requires file upload permission',
+    method: 'POST',
+    endpoint: '/wp-json/wp/v2/media',
+    requiredScope: 'upload_files',
+    testData: {
+      title: 'Test Upload',
+      alt_text: 'Test upload from OAuth demo'
+    }
   },
   {
-    id: 'manage-comments',
-    name: 'Read Comments',
-    description: 'Fetch recent comments',
-    method: 'GET',
-    endpoint: '/wp-json/wp/v2/comments?per_page=5',
-    requiredScope: 'moderate_comments'
+    id: 'manage-categories',
+    name: 'Create Category (Simulation)',
+    description: 'Create a new category - requires category management permission',
+    method: 'POST',
+    endpoint: '/wp-json/wp/v2/categories',
+    requiredScope: 'manage_categories',
+    testData: {
+      name: 'OAuth Demo Category',
+      description: 'Category created by OAuth2 demo'
+    }
   },
   {
     id: 'delete-post',
     name: 'Delete Post (Simulation)',
-    description: 'This would delete a post (simulated - no actual deletion)',
+    description: 'Delete a post - requires deletion permission (simulated)',
     method: 'DELETE',
     endpoint: '/wp-json/wp/v2/posts/1',
     requiredScope: 'delete'
@@ -87,9 +111,9 @@ const ApiTester: React.FC = () => {
       let response;
       const fullUrl = `${oauthConfig.wpBaseUrl}${action.endpoint}`;
 
-      if (action.method === 'POST' && action.testData) {
+      if ((action.method === 'POST' || action.method === 'PUT') && action.testData) {
         response = await makeAuthenticatedRequest<any>(fullUrl, accessToken, {
-          method: 'POST',
+          method: action.method,
           headers: {
             'Content-Type': 'application/json',
           },
@@ -174,10 +198,23 @@ const ApiTester: React.FC = () => {
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">API Permission Testing</h3>
-      <p className="text-gray-600 text-sm mb-6">
-        Test different WordPress REST API actions to see how permissions are enforced.
-        Actions will only work if you've been granted the required permission.
+      <p className="text-gray-600 text-sm mb-4">
+        Test different WordPress REST API actions to see how OAuth2 permissions are enforced.
+        Each API call requires specific permissions that you must grant during OAuth2 authorization.
       </p>
+
+      {/* Scope Explanation Section */}
+      <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h4 className="text-sm font-semibold text-blue-900 mb-2">Understanding OAuth2 Scopes</h4>
+        <div className="text-sm text-blue-800 space-y-2">
+          <div><strong>read:</strong> Broad scope for viewing all content - posts, pages, media, comments, user profiles</div>
+          <div><strong>write:</strong> Create and edit content - posts, pages, custom post types</div>
+          <div><strong>upload_files:</strong> Upload and manage media files - images, documents, etc.</div>
+          <div><strong>manage_categories:</strong> Create, edit, and delete categories and tags</div>
+          <div><strong>moderate_comments:</strong> Approve, reject, spam, and delete comments</div>
+          <div><strong>delete:</strong> Delete content - posts, pages, and other content types</div>
+        </div>
+      </div>
 
       <div className="space-y-4">
         {apiActions.map((action) => {
@@ -199,10 +236,10 @@ const ApiTester: React.FC = () => {
                     }`}>
                       {action.method}
                     </span>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                       canPerform ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                     }`}>
-                      {canPerform ? '✓ Granted' : '✗ Missing'}
+                      {canPerform ? '✓ Permission Granted' : '✗ Permission Required'}
                     </span>
                   </div>
                   <p className="text-xs text-gray-500 mb-1">{action.description}</p>
@@ -234,10 +271,10 @@ const ApiTester: React.FC = () => {
                       <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                     </svg>
                     <div>
-                      <p className="text-orange-800 font-medium">Missing Permission</p>
+                      <p className="text-orange-800 font-medium">OAuth2 Permission Required</p>
                       <p className="text-orange-700 text-xs">
-                        You need the <strong>{action.requiredScope}</strong> permission to perform this action successfully.
-                        Click "Try Without Permission" to see how the WordPress API rejects unauthorized requests.
+                        This action requires the <strong>{action.requiredScope}</strong> permission, which you haven't granted to this app.
+                        Test it anyway to see WordPress's OAuth2 security in action - it will properly reject the request.
                       </p>
                     </div>
                   </div>
@@ -315,18 +352,35 @@ const ApiTester: React.FC = () => {
         })}
       </div>
 
-      <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-        <div className="flex items-start">
-          <svg className="w-5 h-5 text-yellow-600 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-          </svg>
-          <div>
-            <h4 className="text-sm font-medium text-yellow-900">Key OAuth2 Security Concept</h4>
-            <p className="text-sm text-yellow-800">
-              Even if you're logged in as an admin user with full WordPress permissions,
-              this app can only perform actions you've explicitly granted it permission for.
-              This is the core security benefit of OAuth2 - apps get limited, user-approved access.
-            </p>
+      <div className="mt-6 space-y-4">
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-start">
+            <svg className="w-5 h-5 text-green-600 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <h4 className="text-sm font-medium text-green-900">Why Some Actions Work with Just "Read" Permission</h4>
+              <p className="text-sm text-green-800">
+                If you granted the <strong>read</strong> permission, you'll see that "Read Media Library" and "Read Comments" work successfully.
+                This is because the <strong>read</strong> scope is intentionally broad - it covers viewing ALL content types in WordPress:
+                posts, pages, media, comments, and user profiles. This follows OAuth2 best practices for content consumption.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-start">
+            <svg className="w-5 h-5 text-yellow-600 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <h4 className="text-sm font-medium text-yellow-900">OAuth2 Security in Action</h4>
+              <p className="text-sm text-yellow-800">
+                Even if you're an admin user with full WordPress permissions, this app can only perform actions you've explicitly granted.
+                Try testing actions without the required permissions to see WordPress properly reject unauthorized requests.
+              </p>
+            </div>
           </div>
         </div>
       </div>

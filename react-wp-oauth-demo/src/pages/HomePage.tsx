@@ -51,34 +51,63 @@ const HomePage: React.FC = () => {
           {/* User Information Card */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Profile</h3>
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-500">User ID</label>
-                <p className="text-gray-900">{user.id}</p>
+                <label className="block text-sm font-medium text-gray-500 mb-1">User ID</label>
+                <p className="text-gray-900 font-mono text-sm bg-gray-50 px-2 py-1 rounded">
+                  {user.id || 'Not available'}
+                </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-500">Username</label>
-                <p className="text-gray-900">{user.username}</p>
+                <label className="block text-sm font-medium text-gray-500 mb-1">Username</label>
+                <p className="text-gray-900 font-medium">
+                  {user.username || 'Not available'}
+                </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-500">Display Name</label>
-                <p className="text-gray-900">{user.display_name}</p>
+                <label className="block text-sm font-medium text-gray-500 mb-1">Display Name</label>
+                <p className="text-gray-900">
+                  {user.display_name || user.username || 'Not available'}
+                </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-500">Email</label>
-                <p className="text-gray-900">{user.email}</p>
+                <label className="block text-sm font-medium text-gray-500 mb-1">Email</label>
+                <p className="text-gray-900">
+                  {user.email || 'Not available'}
+                </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-500">Roles</label>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {user.roles.map((role, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                    >
-                      {role}
-                    </span>
-                  ))}
+                <label className="block text-sm font-medium text-gray-500 mb-2">WordPress Roles</label>
+                <div className="flex flex-wrap gap-2">
+                  {user.roles && user.roles.length > 0 ? (
+                    user.roles.map((role, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200"
+                      >
+                        {role.charAt(0).toUpperCase() + role.slice(1)}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-gray-500 text-sm">No roles assigned</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Authentication Status */}
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Authentication Status</p>
+                  <div className="flex items-center mt-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    <span className="text-sm text-green-700 font-medium">Authenticated via OAuth2</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-500">Token Type</p>
+                  <p className="text-sm font-medium text-gray-900">Bearer</p>
                 </div>
               </div>
             </div>

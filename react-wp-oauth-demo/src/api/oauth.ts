@@ -28,15 +28,26 @@ export async function exchangeCodeForToken(
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-    }).json<OAuthTokenResponse>();
+    }).json<any>();
+
+    // Handle wp-rest-auth-multi plugin response format
+    const tokenData = response.data || response;
+
+    const tokenResponse: OAuthTokenResponse = {
+      access_token: tokenData.access_token,
+      token_type: tokenData.token_type || 'Bearer',
+      expires_in: tokenData.expires_in || 3600,
+      refresh_token: tokenData.refresh_token,
+      scope: tokenData.scope
+    };
 
     debugLog('Token exchange successful', {
-      token_type: response.token_type,
-      expires_in: response.expires_in,
-      has_refresh_token: !!response.refresh_token
+      token_type: tokenResponse.token_type,
+      expires_in: tokenResponse.expires_in,
+      has_refresh_token: !!tokenResponse.refresh_token
     });
 
-    return response;
+    return tokenResponse;
   } catch (error) {
     debugLog('Token exchange failed', error);
     throw new Error('Failed to exchange code for tokens');
@@ -59,10 +70,21 @@ export async function refreshAccessToken(refreshToken: string): Promise<OAuthTok
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-    }).json<OAuthTokenResponse>();
+    }).json<any>();
 
-    debugLog('Token refresh successful', { expires_in: response.expires_in });
-    return response;
+    // Handle wp-rest-auth-multi plugin response format
+    const tokenData = response.data || response;
+
+    const tokenResponse: OAuthTokenResponse = {
+      access_token: tokenData.access_token,
+      token_type: tokenData.token_type || 'Bearer',
+      expires_in: tokenData.expires_in || 3600,
+      refresh_token: tokenData.refresh_token,
+      scope: tokenData.scope
+    };
+
+    debugLog('Token refresh successful', { expires_in: tokenResponse.expires_in });
+    return tokenResponse;
   } catch (error) {
     debugLog('Token refresh failed', error);
     throw new Error('Failed to refresh access token');
@@ -73,16 +95,73 @@ export async function getUserInfo(accessToken: string): Promise<UserInfo> {
   debugLog('Fetching user info');
 
   try {
-    const response = await ky.get(`${config.wpBaseUrl}/wp-json/oauth2/v1/userinfo`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    }).json<UserInfo>();
+    // Try OAuth2 userinfo endpoint first
+    let response;
+    let userData;
 
-    debugLog('User info retrieved', { id: response.id, username: response.username });
-    return response;
+    try {
+      response = await ky.get(`${config.wpBaseUrl}/wp-json/oauth2/v1/userinfo`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      }).json<any>();
+
+      debugLog('OAuth2 userinfo response', { response });
+      userData = response.data || response;
+
+    } catch (oauth2Error) {
+      debugLog('OAuth2 userinfo failed, trying WordPress REST API /users/me', oauth2Error);
+
+      try {
+        // Fallback to standard WordPress REST API
+        response = await ky.get(`${config.wpBaseUrl}/wp-json/wp/v2/users/me`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        }).json<any>();
+
+        debugLog('WordPress REST API /users/me response', { response });
+        userData = response.data || response;
+
+      } catch (wpApiError) {
+        debugLog('WordPress REST API /users/me also failed, trying JWT plugin endpoint', wpApiError);
+
+        // Third fallback: try JWT plugin user endpoint
+        response = await ky.get(`${config.wpBaseUrl}/wp-json/jwt-auth/v1/token/validate`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        }).json<any>();
+
+        debugLog('JWT validate response', { response });
+        userData = response.data || response;
+      }
+    }
+
+    debugLog('Final parsed userData', { userData });
+
+    // Handle nested user data structure from wp-rest-auth-multi
+    const user = userData.user || userData;
+
+    const userInfo: UserInfo = {
+      id: user.id || user.ID || user.user_id || userData.user_id,
+      username: user.username || user.user_login || user.user_nicename || user.slug,
+      email: user.email || user.user_email,
+      display_name: user.display_name || user.name || user.username || user.user_login,
+      roles: user.roles || []
+    };
+
+    debugLog('Final userInfo object', {
+      id: userInfo.id,
+      username: userInfo.username,
+      email: userInfo.email,
+      display_name: userInfo.display_name,
+      roles: userInfo.roles
+    });
+
+    return userInfo;
   } catch (error) {
-    debugLog('Failed to fetch user info', error);
+    debugLog('Failed to fetch user info from both endpoints', error);
     throw new Error('Failed to fetch user information');
   }
 }

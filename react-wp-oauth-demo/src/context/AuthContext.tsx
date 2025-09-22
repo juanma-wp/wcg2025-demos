@@ -127,9 +127,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     debugLog('Initiating OAuth login flow', { requestedScopes: scopes });
 
     const state = generateState();
+
+    // Store state in both storages with consistent key names
     sessionStorage.setItem('oauth_state', state);
-    // Also store in localStorage as fallback for development hot reloading
+    localStorage.setItem('oauth_state', state);
     localStorage.setItem('oauth_state_fallback', state);
+
+    // Debug storage
+    debugLog('Generated OAuth state', {
+      state,
+      sessionStorage: sessionStorage.getItem('oauth_state'),
+      localStorage: localStorage.getItem('oauth_state')
+    });
 
     const authUrl = buildAuthorizationUrl(oauthConfig, state, scopes);
     debugLog('Redirecting to authorization URL', { authUrl, scopes });
@@ -150,15 +159,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       debugLog('Handling OAuth callback', { url: callbackUrl });
 
       const { code, state: returnedState, error } = parseCallbackParams(callbackUrl);
+
+      // Try multiple sources for expected state
       let expectedState = sessionStorage.getItem('oauth_state');
 
-      // Fallback to localStorage if sessionStorage is empty (common during development hot reloading)
+      if (!expectedState) {
+        expectedState = localStorage.getItem('oauth_state');
+        debugLog('Using state from localStorage', { state: expectedState });
+      }
+
       if (!expectedState) {
         expectedState = localStorage.getItem('oauth_state_fallback');
         debugLog('Using fallback state from localStorage', { fallbackState: expectedState });
       }
 
-      debugLog('Callback parameters parsed', { code, state: returnedState, error, expectedState });
+      debugLog('Callback parameters parsed', {
+        code: code ? code.substring(0, 10) + '...' : null,
+        returnedState,
+        expectedState,
+        storageDebug: {
+          sessionStorage: sessionStorage.getItem('oauth_state'),
+          localStorage: localStorage.getItem('oauth_state'),
+          fallback: localStorage.getItem('oauth_state_fallback')
+        }
+      });
 
       if (error) {
         debugLog('OAuth error received', { error });
