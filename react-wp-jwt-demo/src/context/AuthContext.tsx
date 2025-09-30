@@ -1,19 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import * as Auth from '../api/auth'
-import { validateJwtBasics } from '../utils/jwt-debug'
+import { createSingleton } from '../lib/singleton'
 
 export type User = {
   id: string
   email: string
   nicename: string
   displayName: string
-}
-
-export type AuthState = {
-  accessToken: string | null
-  user: User | null
-  isLoading: boolean
-  error: string | null
 }
 
 type AuthContextValue = {
@@ -23,7 +16,6 @@ type AuthContextValue = {
   error: string | null
   login: (username: string, password: string) => Promise<void>
   logout: () => Promise<void>
-  refreshToken: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -32,22 +24,17 @@ const AuthContext = createContext<AuthContextValue>({
   isLoading: false,
   error: null,
   login: async () => {},
-  logout: async () => {},
-  refreshToken: async () => {}
+  logout: async () => {}
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Store access token in memory only (not localStorage)
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [authCheckCompleted, setAuthCheckCompleted] = useState(false)
+  const refreshTimeoutRef = useRef<number | null>(null)
 
-  // Refs for token refresh management
-  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const refreshPromiseRef = useRef<Promise<void> | null>(null)
-
-  // Clear any existing refresh timeout
   const clearRefreshTimeout = useCallback(() => {
     if (refreshTimeoutRef.current) {
       clearTimeout(refreshTimeoutRef.current)
@@ -55,86 +42,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  // Schedule automatic token refresh
   const scheduleRefresh = useCallback((expiresIn: number) => {
     clearRefreshTimeout()
-
-    // Refresh 2 minutes before expiration (or at 90% of lifetime, whichever is sooner)
     const refreshTime = Math.min(expiresIn - 120, expiresIn * 0.9) * 1000
 
     refreshTimeoutRef.current = setTimeout(async () => {
-      console.log('🔄 JWT Debug - Auto-refreshing token...')
       try {
-        await refreshToken() // Not silent - we want to see auto-refresh logs
-      } catch (error) {
-        console.error('🔄 JWT Debug - Auto-refresh failed:', error)
-        // If refresh fails, user will need to log in again
+        const response = await Auth.refresh()
+        setAccessToken(response.access_token)
+        scheduleRefresh(response.expires_in)
+      } catch {
         setAccessToken(null)
         setUser(null)
       }
     }, refreshTime)
-  }, [])
+  }, [clearRefreshTimeout])
 
-  // Refresh token function
-  const refreshToken = useCallback(async (silent = false) => {
-    // If there's already a refresh in progress, return that promise
-    if (refreshPromiseRef.current) {
-      return refreshPromiseRef.current
-    }
-
-    refreshPromiseRef.current = (async () => {
-      try {
-        if (!silent) {
-          console.log('🔄 JWT Debug - Refreshing token...')
-        }
-
-        const response = await Auth.refresh()
-
-        setAccessToken(response.access_token)
-        setError(null)
-
-        // Schedule next refresh
-        scheduleRefresh(response.expires_in)
-
-        console.log('🔄 JWT Debug - Token refreshed successfully')
-        validateJwtBasics(response.access_token)
-
-      } catch (error) {
-        if (!silent) {
-          console.error('🔄 JWT Debug - Token refresh failed:', error)
-          setError('Session expired. Please log in again.')
-        }
-        setAccessToken(null)
-        setUser(null)
-        throw error
-      } finally {
-        refreshPromiseRef.current = null
-      }
-    })()
-
-    return refreshPromiseRef.current
-  }, [scheduleRefresh])
-
-  // Login function
   const login = useCallback(async (username: string, password: string) => {
     setIsLoading(true)
     setError(null)
 
     try {
-      console.log('🔍 JWT Debug - Attempting login...')
       const response = await Auth.login(username, password)
-
       setAccessToken(response.access_token)
       setUser(response.user)
-
-      // Schedule automatic token refresh
       scheduleRefresh(response.expires_in)
-
-      console.log('🔍 JWT Debug - Login successful:', response.user)
-      validateJwtBasics(response.access_token)
-
     } catch (error: any) {
-      console.error('🔍 JWT Debug - Login failed:', error)
       const errorMessage = error.response?.data?.error || error.message || 'Login failed'
       setError(errorMessage)
       throw error
@@ -143,69 +76,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [scheduleRefresh])
 
-  // Logout function
   const logout = useCallback(async () => {
-    setIsLoading(true)
-
     try {
-      console.log('🔍 JWT Debug - Logging out...')
       await Auth.logout()
     } catch (error) {
-      console.error('🔍 JWT Debug - Logout error:', error)
+      console.error('Logout error:', error)
     } finally {
-      // Clear all auth state
       clearRefreshTimeout()
       setAccessToken(null)
       setUser(null)
       setError(null)
       setIsLoading(false)
-      refreshPromiseRef.current = null
-
-      console.log('🔍 JWT Debug - Logged out successfully')
     }
   }, [clearRefreshTimeout])
 
-  // Try to refresh token on app load (silent login)
+  // Silent login on app load - singleton ensures it only runs once per reload
   useEffect(() => {
-    let isMounted = true
-
-    const attemptSilentLogin = async () => {
+    // Create a singleton for the actual silent login attempt
+    const attemptSilentLogin = createSingleton(async () => {
       try {
-        console.log('🔍 JWT Debug - Attempting silent login on app load...')
-        console.log('🔍 JWT Debug - WordPress URL:', import.meta.env.VITE_WP_BASE_URL || 'https://wcg2025-demo.wp.local/')
-
         const response = await Auth.refresh()
-        console.log('🔍 JWT Debug - Refresh response:', response)
-
-        if (isMounted) {
-          setAccessToken(response.access_token)
-          scheduleRefresh(response.expires_in)
-
-          // Get user profile after successful refresh
-          const profile = await Auth.getProfile(response.access_token)
-          setUser(profile.user)
-          console.log('🔍 JWT Debug - Silent login successful, user:', profile.user)
-        }
-      } catch (error: any) {
-        // Silent failure - this is expected on first visit or after logout
-        console.log('🔍 JWT Debug - Silent login failed:', error.message || error)
-        console.log('🔍 JWT Debug - Error details:', error.response?.data || error.response || 'No additional details')
+        const profile = await Auth.getProfile(response.access_token)
+        
+        // Set all auth state
+        setAccessToken(response.access_token)
+        setUser(profile.user)
+        scheduleRefresh(response.expires_in)
+      } catch {
+        // Silent failure is expected on first visit
+      } finally {
+        // Mark auth check as completed
+        setAuthCheckCompleted(true)
       }
-    }
+    })
 
     attemptSilentLogin()
+  }, [])
 
-    return () => {
-      isMounted = false
-    }
-  }, [scheduleRefresh])
-
-  // Cleanup on unmount
+  // Manage loading state based on auth check completion
   useEffect(() => {
-    return () => {
-      clearRefreshTimeout()
+    if (authCheckCompleted) {
+      setIsLoading(false)
     }
-  }, [clearRefreshTimeout])
+  }, [authCheckCompleted])
+
+  useEffect(() => clearRefreshTimeout, [clearRefreshTimeout])
 
   const value: AuthContextValue = {
     accessToken,
@@ -213,8 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading,
     error,
     login,
-    logout,
-    refreshToken
+    logout
   }
 
   return (

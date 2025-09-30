@@ -29,10 +29,6 @@ export async function login(username: string, password: string): Promise<LoginRe
     credentials: 'include'
   }).json<any>()
 
-  // Debug: Log the actual response to understand structure
-  console.log('🔍 JWT Debug - Login response:', res)
-
-  // Plugin returns data in res.data object
   const data = res.data || res
   const user = data.user || {}
 
@@ -49,12 +45,10 @@ export async function login(username: string, password: string): Promise<LoginRe
 }
 
 export async function refresh(): Promise<RefreshResponse> {
-  // Plugin handles refresh tokens via HttpOnly cookies automatically
   const res = await wpClient.post(`wp-json/${WP_JWT_NAMESPACE}/refresh`, {
     credentials: 'include'
   }).json<any>()
 
-  // Plugin returns data in res.data object
   const data = res.data || res
 
   return {

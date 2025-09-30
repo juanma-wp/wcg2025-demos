@@ -5,7 +5,7 @@ import ApiTester from '../components/ApiTester';
 import { SCOPE_DESCRIPTIONS } from '../utils/oauth';
 
 const HomePage: React.FC = () => {
-  const { isAuthenticated, user, grantedScopes, login, error, clearError } = useAuth();
+  const { isAuthenticated, user, grantedScopes, login, error, clearError, loading } = useAuth();
 
   // Available scopes for selection
   const availableScopes = [
@@ -31,6 +31,25 @@ const HomePage: React.FC = () => {
     // Request selected permissions - WordPress will show consent screen
     login(selectedScopes.length > 0 ? selectedScopes : ['read']);
   };
+
+  // Show authentication check loading state during initial load
+  if (loading) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-8">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-8">
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <div className="text-blue-700 text-center">
+                <p className="font-medium text-lg">Checking authentication...</p>
+                <p className="text-sm text-blue-600">Please wait while we verify your OAuth2 session</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isAuthenticated && user) {
     return (

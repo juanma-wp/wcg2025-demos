@@ -1,30 +1,28 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import {
   exchangeCodeForToken,
   refreshAccessToken,
   getUserInfo,
+  logout as logoutApi,
   oauthConfig
 } from '../api/oauth';
 import {
   buildAuthorizationUrl,
   generateState,
   parseCallbackParams,
-  debugLog,
   UserInfo
 } from '../utils/oauth';
+import { createSingleton } from '../lib/singleton';
 
-interface AuthState {
+interface AuthContextType {
   isAuthenticated: boolean;
   user: UserInfo | null;
   accessToken: string | null;
   grantedScopes: string[];
   loading: boolean;
   error: string | null;
-}
-
-interface AuthContextType extends AuthState {
   login: (scopes?: string[]) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   handleCallback: (url: string) => Promise<boolean>;
   clearError: () => void;
 }
@@ -39,273 +37,168 @@ export const useAuth = () => {
   return context;
 };
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [user, setUser] = useState<UserInfo | null>(null);
+  const [grantedScopes, setGrantedScopes] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [authCheckCompleted, setAuthCheckCompleted] = useState(false);
+  const refreshTimeoutRef = useRef<number | null>(null);
+  const isProcessingCallback = useRef(false);
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [state, setState] = useState<AuthState>({
-    isAuthenticated: false,
-    user: null,
-    accessToken: null,
-    grantedScopes: [],
-    loading: true,
-    error: null,
-  });
-
-  // Use ref to track if callback is being processed
-  const isProcessingCallback = React.useRef(false);
-
-  // Initialize authentication state from localStorage
-  useEffect(() => {
-    const initializeAuth = async () => {
-      debugLog('Initializing authentication state');
-
-      const storedToken = localStorage.getItem('oauth_access_token');
-      const refreshToken = localStorage.getItem('oauth_refresh_token');
-      const storedScopes = localStorage.getItem('oauth_granted_scopes');
-      const grantedScopes = storedScopes ? JSON.parse(storedScopes) : [];
-
-      if (storedToken) {
-        try {
-          // Try to get user info with existing token
-          const user = await getUserInfo(storedToken);
-          setState(prev => ({
-            ...prev,
-            isAuthenticated: true,
-            user,
-            accessToken: storedToken,
-            grantedScopes,
-            loading: false,
-          }));
-          debugLog('Authentication restored from storage');
-        } catch (error) {
-          // Token might be expired, try to refresh if we have a refresh token
-          if (refreshToken) {
-            try {
-              debugLog('Access token expired, attempting refresh');
-              const tokenResponse = await refreshAccessToken(refreshToken);
-              const user = await getUserInfo(tokenResponse.access_token);
-
-              localStorage.setItem('oauth_access_token', tokenResponse.access_token);
-              if (tokenResponse.refresh_token) {
-                localStorage.setItem('oauth_refresh_token', tokenResponse.refresh_token);
-              }
-
-              setState(prev => ({
-                ...prev,
-                isAuthenticated: true,
-                user,
-                accessToken: tokenResponse.access_token,
-                grantedScopes,
-                loading: false,
-              }));
-              debugLog('Token refreshed successfully');
-            } catch (refreshError) {
-              // Refresh failed, clear storage and require new login
-              debugLog('Token refresh failed, clearing storage');
-              localStorage.removeItem('oauth_access_token');
-              localStorage.removeItem('oauth_refresh_token');
-              localStorage.removeItem('oauth_granted_scopes');
-              setState(prev => ({ ...prev, loading: false }));
-            }
-          } else {
-            // No refresh token, clear invalid access token
-            localStorage.removeItem('oauth_access_token');
-            setState(prev => ({ ...prev, loading: false }));
-          }
-        }
-      } else {
-        setState(prev => ({ ...prev, loading: false }));
-      }
-    };
-
-    initializeAuth();
+  const clearRefreshTimeout = useCallback(() => {
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+      refreshTimeoutRef.current = null;
+    }
   }, []);
 
-  const login = (scopes: string[] = ['read', 'write', 'upload_files']) => {
-    debugLog('Initiating OAuth login flow', { requestedScopes: scopes });
+  const scheduleRefresh = useCallback((expiresIn: number) => {
+    clearRefreshTimeout();
+    const refreshTime = Math.min(expiresIn - 120, expiresIn * 0.9) * 1000;
 
-    const state = generateState();
+    refreshTimeoutRef.current = setTimeout(async () => {
+      try {
+        const tokenResponse = await refreshAccessToken();
+        const userData = await getUserInfo(tokenResponse.access_token);
+        setAccessToken(tokenResponse.access_token);
+        setUser(userData);
+        const scopes = tokenResponse.scope ? tokenResponse.scope.split(' ').filter(scope => scope.length > 0) : [];
+        setGrantedScopes(scopes);
+        scheduleRefresh(tokenResponse.expires_in);
+      } catch {
+        setAccessToken(null);
+        setUser(null);
+        setGrantedScopes([]);
+      }
+    }, refreshTime);
+  }, [clearRefreshTimeout]);
 
-    // Store state in both storages with consistent key names
-    sessionStorage.setItem('oauth_state', state);
-    localStorage.setItem('oauth_state', state);
-    localStorage.setItem('oauth_state_fallback', state);
-
-    // Debug storage
-    debugLog('Generated OAuth state', {
-      state,
-      sessionStorage: sessionStorage.getItem('oauth_state'),
-      localStorage: localStorage.getItem('oauth_state')
+  // Silent login on app load - singleton ensures it only runs once per reload
+  useEffect(() => {
+    // Create a singleton for the actual silent login attempt
+    const attemptSilentLogin = createSingleton(async () => {
+      try {
+        const tokenResponse = await refreshAccessToken();
+        const userData = await getUserInfo(tokenResponse.access_token);
+        
+        setAccessToken(tokenResponse.access_token);
+        setUser(userData);
+        
+        const scopes = tokenResponse.scope ? tokenResponse.scope.split(' ').filter(scope => scope.length > 0) : [];
+        setGrantedScopes(scopes);
+        scheduleRefresh(tokenResponse.expires_in);
+      } catch {
+        // Silent failure is expected on first visit
+      } finally {
+        // Mark auth check as completed
+        setAuthCheckCompleted(true);
+      }
     });
 
-    const authUrl = buildAuthorizationUrl(oauthConfig, state, scopes);
-    debugLog('Redirecting to authorization URL', { authUrl, scopes });
+    attemptSilentLogin();
+  }, []);
 
+  // Manage loading state based on auth check completion
+  useEffect(() => {
+    if (authCheckCompleted) {
+      setLoading(false);
+    }
+  }, [authCheckCompleted]);
+
+  const login = (scopes: string[] = ['read', 'write', 'upload_files']) => {
+    const state = generateState();
+    sessionStorage.setItem('oauth_state', state);
+    const authUrl = buildAuthorizationUrl(oauthConfig, state, scopes);
     window.location.href = authUrl;
   };
 
-  const handleCallback = async (callbackUrl: string): Promise<boolean> => {
-    // Prevent concurrent callback processing
-    if (isProcessingCallback.current) {
-      debugLog('Callback already being processed, skipping', { url: callbackUrl });
-      return true;
-    }
-
+  const handleCallback = useCallback(async (callbackUrl: string): Promise<boolean> => {
+    if (isProcessingCallback.current) return true;
     isProcessingCallback.current = true;
 
     try {
-      debugLog('Handling OAuth callback', { url: callbackUrl });
-
       const { code, state: returnedState, error } = parseCallbackParams(callbackUrl);
-
-      // Try multiple sources for expected state
-      let expectedState = sessionStorage.getItem('oauth_state');
-
-      if (!expectedState) {
-        expectedState = localStorage.getItem('oauth_state');
-        debugLog('Using state from localStorage', { state: expectedState });
-      }
-
-      if (!expectedState) {
-        expectedState = localStorage.getItem('oauth_state_fallback');
-        debugLog('Using fallback state from localStorage', { fallbackState: expectedState });
-      }
-
-      debugLog('Callback parameters parsed', {
-        code: code ? code.substring(0, 10) + '...' : null,
-        returnedState,
-        expectedState,
-        storageDebug: {
-          sessionStorage: sessionStorage.getItem('oauth_state'),
-          localStorage: localStorage.getItem('oauth_state'),
-          fallback: localStorage.getItem('oauth_state_fallback')
-        }
-      });
+      const expectedState = sessionStorage.getItem('oauth_state');
 
       if (error) {
-        debugLog('OAuth error received', { error });
-        setState(prev => ({
-          ...prev,
-          error: `OAuth error: ${error}`,
-          loading: false,
-        }));
+        setError(`OAuth2 error: ${error}`);
+        setLoading(false);
         return false;
       }
 
       if (!code) {
-        debugLog('No authorization code found in callback URL', {
-          fullUrl: callbackUrl,
-          parsedParams: { code, state: returnedState, error }
-        });
-        setState(prev => ({
-          ...prev,
-          error: 'No authorization code received',
-          loading: false,
-        }));
+        setError('No authorization code received');
+        setLoading(false);
         return false;
       }
 
-      // Check if this code has already been processed
       const processedCode = sessionStorage.getItem('oauth_processed_code');
-      if (processedCode === code) {
-        debugLog('Authorization code already processed, skipping', { code: code.substring(0, 10) + '...' });
-        return true; // Return success to avoid error state
-      }
+      if (processedCode === code) return true;
 
       if (returnedState !== expectedState) {
-        debugLog('State mismatch', {
-          expected: expectedState,
-          received: returnedState,
-          sessionStorageKeys: Object.keys(sessionStorage),
-          allSessionStorage: Object.fromEntries(Object.keys(sessionStorage).map(key => [key, sessionStorage.getItem(key)]))
-        });
-        setState(prev => ({
-          ...prev,
-          error: `Invalid state parameter. Expected: ${expectedState}, Received: ${returnedState}`,
-          loading: false,
-        }));
+        setError('Invalid state parameter');
+        setLoading(false);
         return false;
       }
 
-      setState(prev => ({ ...prev, loading: true, error: null }));
+      setLoading(true);
+      setError(null);
 
       const tokenResponse = await exchangeCodeForToken(code, returnedState || '');
-      const user = await getUserInfo(tokenResponse.access_token);
+      const userData = await getUserInfo(tokenResponse.access_token);
+      const scopes = tokenResponse.scope ? tokenResponse.scope.split(' ').filter(scope => scope.length > 0) : [];
 
-      // Parse granted scopes from token response
-      const grantedScopes = tokenResponse.scope ? tokenResponse.scope.split(' ').filter(scope => scope.length > 0) : [];
-
-      // Mark this code as processed to prevent reuse
       sessionStorage.setItem('oauth_processed_code', code);
-
-      // Store tokens and granted scopes
-      localStorage.setItem('oauth_access_token', tokenResponse.access_token);
-      localStorage.setItem('oauth_granted_scopes', JSON.stringify(grantedScopes));
-      if (tokenResponse.refresh_token) {
-        localStorage.setItem('oauth_refresh_token', tokenResponse.refresh_token);
-      }
-
-      // Clear state from session storage and localStorage fallback
+      setAccessToken(tokenResponse.access_token);
+      setUser(userData);
+      setGrantedScopes(scopes);
+      setLoading(false);
+      setError(null);
+      scheduleRefresh(tokenResponse.expires_in);
       sessionStorage.removeItem('oauth_state');
-      localStorage.removeItem('oauth_state_fallback');
 
-      setState(prev => ({
-        ...prev,
-        isAuthenticated: true,
-        user,
-        accessToken: tokenResponse.access_token,
-        grantedScopes,
-        loading: false,
-        error: null,
-      }));
-
-      debugLog('OAuth callback handled successfully', { userId: user.id });
       return true;
 
     } catch (error) {
-      debugLog('OAuth callback failed', error);
-      setState(prev => ({
-        ...prev,
-        error: error instanceof Error ? error.message : 'Authentication failed',
-        loading: false,
-      }));
+      setError(error instanceof Error ? error.message : 'Authentication failed');
+      setLoading(false);
       return false;
     } finally {
-      // Always reset the processing flag
       isProcessingCallback.current = false;
     }
-  };
+  }, [scheduleRefresh]);
 
-  const logout = () => {
-    debugLog('Logging out user');
+  const logout = useCallback(async () => {
+    try {
+      await logoutApi();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      clearRefreshTimeout();
+      setAccessToken(null);
+      setUser(null);
+      setGrantedScopes([]);
+      setError(null);
+      setLoading(false);
+      sessionStorage.removeItem('oauth_state');
+      sessionStorage.removeItem('oauth_processed_code');
+    }
+  }, [clearRefreshTimeout]);
 
-    localStorage.removeItem('oauth_access_token');
-    localStorage.removeItem('oauth_refresh_token');
-    localStorage.removeItem('oauth_granted_scopes');
-    localStorage.removeItem('oauth_state_fallback');
-    sessionStorage.removeItem('oauth_state');
-    sessionStorage.removeItem('oauth_processed_code');
-
-    setState({
-      isAuthenticated: false,
-      user: null,
-      accessToken: null,
-      grantedScopes: [],
-      loading: false,
-      error: null,
-    });
-  };
-
-  const clearError = () => {
-    setState(prev => ({ ...prev, error: null }));
-  };
+  const clearError = useCallback(() => setError(null), []);
+  const isAuthenticated = !!accessToken && !!user;
 
   return (
     <AuthContext.Provider
       value={{
-        ...state,
+        isAuthenticated,
+        user,
+        accessToken,
+        grantedScopes,
+        loading,
+        error,
         login,
         logout,
         handleCallback,
