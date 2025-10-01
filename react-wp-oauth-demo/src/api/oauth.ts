@@ -10,16 +10,23 @@ const config: OAuthConfig = {
 
 export async function exchangeCodeForToken(
   code: string,
-  state: string
+  state: string,
+  codeVerifier?: string
 ): Promise<OAuthTokenResponse> {
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
     code,
     redirect_uri: config.redirectUri,
     client_id: config.clientId,
-    client_secret: config.clientSecret,
     state
   });
+
+  // Use PKCE if code_verifier is provided, otherwise fall back to client_secret
+  if (codeVerifier) {
+    body.append('code_verifier', codeVerifier);
+  } else if (config.clientSecret) {
+    body.append('client_secret', config.clientSecret);
+  }
 
   try {
     const response = await ky.post(`${config.wpBaseUrl}/wp-json/oauth2/v1/token`, {

@@ -9,6 +9,8 @@ import {
 import {
   buildAuthorizationUrl,
   generateState,
+  generateCodeVerifier,
+  generateCodeChallenge,
   parseCallbackParams,
   UserInfo
 } from '../utils/oauth';
@@ -107,10 +109,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [authCheckCompleted]);
 
-  const login = (scopes: string[] = ['read', 'write', 'upload_files']) => {
+  const login = async (scopes: string[] = ['read', 'write', 'upload_files']) => {
     const state = generateState();
+    const codeVerifier = generateCodeVerifier();
+    const codeChallenge = await generateCodeChallenge(codeVerifier);
+
     sessionStorage.setItem('oauth_state', state);
-    const authUrl = buildAuthorizationUrl(oauthConfig, state, scopes);
+    sessionStorage.setItem('pkce_code_verifier', codeVerifier);
+
+    const authUrl = await buildAuthorizationUrl(oauthConfig, state, scopes, codeChallenge);
     window.location.href = authUrl;
   };
 
@@ -121,6 +128,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const { code, state: returnedState, error } = parseCallbackParams(callbackUrl);
       const expectedState = sessionStorage.getItem('oauth_state');
+      const codeVerifier = sessionStorage.getItem('pkce_code_verifier');
 
       if (error) {
         setError(`OAuth2 error: ${error}`);
@@ -143,10 +151,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return false;
       }
 
+      if (!codeVerifier) {
+        setError('PKCE code verifier not found');
+        setLoading(false);
+        return false;
+      }
+
       setLoading(true);
       setError(null);
 
-      const tokenResponse = await exchangeCodeForToken(code, returnedState || '');
+      const tokenResponse = await exchangeCodeForToken(code, returnedState || '', codeVerifier);
       const userData = await getUserInfo(tokenResponse.access_token);
       const scopes = tokenResponse.scope ? tokenResponse.scope.split(' ').filter(scope => scope.length > 0) : [];
 
@@ -158,6 +172,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setError(null);
       scheduleRefresh(tokenResponse.expires_in);
       sessionStorage.removeItem('oauth_state');
+      sessionStorage.removeItem('pkce_code_verifier');
 
       return true;
 
@@ -184,6 +199,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setLoading(false);
       sessionStorage.removeItem('oauth_state');
       sessionStorage.removeItem('oauth_processed_code');
+      sessionStorage.removeItem('pkce_code_verifier');
     }
   }, [clearRefreshTimeout]);
 

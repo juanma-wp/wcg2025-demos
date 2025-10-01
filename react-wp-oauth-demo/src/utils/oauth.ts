@@ -1,7 +1,7 @@
 export interface OAuthConfig {
   wpBaseUrl: string;
   clientId: string;
-  clientSecret: string;
+  clientSecret?: string; // Optional when using PKCE
   redirectUri: string;
 }
 
@@ -21,6 +21,10 @@ export interface UserInfo {
   roles: string[];
 }
 
+/**
+ * Generate a cryptographically secure code verifier for PKCE
+ * Must be between 43-128 characters
+ */
 export function generateCodeVerifier(): string {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
@@ -30,6 +34,9 @@ export function generateCodeVerifier(): string {
     .replace(/=/g, '');
 }
 
+/**
+ * Generate code challenge from verifier using S256 method (SHA-256)
+ */
 export async function generateCodeChallenge(verifier: string): Promise<string> {
   const data = new TextEncoder().encode(verifier);
   const digest = await crypto.subtle.digest('SHA-256', data);
@@ -45,7 +52,15 @@ export function generateState(): string {
   return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-export function buildAuthorizationUrl(config: OAuthConfig, state: string, scopes: string[] = ['read', 'write']): string {
+/**
+ * Build authorization URL with PKCE parameters
+ */
+export async function buildAuthorizationUrl(
+  config: OAuthConfig,
+  state: string,
+  scopes: string[] = ['read', 'write'],
+  codeChallenge?: string
+): Promise<string> {
   const params = new URLSearchParams({
     oauth2_authorize: '1',
     response_type: 'code',
@@ -54,6 +69,12 @@ export function buildAuthorizationUrl(config: OAuthConfig, state: string, scopes
     state: state,
     scope: scopes.join(' ')
   });
+
+  // Add PKCE parameters if code challenge is provided
+  if (codeChallenge) {
+    params.append('code_challenge', codeChallenge);
+    params.append('code_challenge_method', 'S256');
+  }
 
   return `${config.wpBaseUrl}/?${params.toString()}`;
 }
