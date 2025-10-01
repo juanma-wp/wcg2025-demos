@@ -2,9 +2,10 @@ import ky from 'ky';
 import { OAuthConfig, OAuthTokenResponse, UserInfo } from '../utils/oauth';
 
 const config: OAuthConfig = {
-  wpBaseUrl: import.meta.env.VITE_WP_BASE_URL || 'http://localhost:8080',
-  clientId: import.meta.env.VITE_OAUTH_CLIENT_ID || 'demo-client',
-  redirectUri: import.meta.env.VITE_OAUTH_REDIRECT_URI || 'http://localhost:5174/callback',
+  wpBaseUrl: import.meta.env.VITE_WP_BASE_URL,
+  clientId: import.meta.env.VITE_OAUTH_CLIENT_ID,
+  clientSecret: import.meta.env.VITE_OAUTH_CLIENT_SECRET,
+  redirectUri: import.meta.env.VITE_OAUTH_REDIRECT_URI,
 };
 
 export async function exchangeCodeForToken(
@@ -16,7 +17,7 @@ export async function exchangeCodeForToken(
     code,
     redirect_uri: config.redirectUri,
     client_id: config.clientId,
-    client_secret: 'demo-secret',
+    client_secret: config.clientSecret,
     state
   });
 

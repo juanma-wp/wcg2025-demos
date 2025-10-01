@@ -1,6 +1,7 @@
 export interface OAuthConfig {
   wpBaseUrl: string;
   clientId: string;
+  clientSecret: string;
   redirectUri: string;
 }
 
