@@ -91,13 +91,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [clearRefreshTimeout])
 
   // Silent login on app load - singleton ensures it only runs once per reload
-  useEffect(() => {
-    // Create a singleton for the actual silent login attempt
-    const attemptSilentLogin = createSingleton(async () => {
+  // Create the singleton outside useEffect to ensure it's only created once per component instance
+  const attemptSilentLoginRef = useRef(
+    createSingleton(async () => {
       try {
         const response = await Auth.refresh()
         const profile = await Auth.getProfile(response.access_token)
-        
+
         // Set all auth state
         setAccessToken(response.access_token)
         setUser(profile.user)
@@ -109,8 +109,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setAuthCheckCompleted(true)
       }
     })
+  )
 
-    attemptSilentLogin()
+  useEffect(() => {
+    attemptSilentLoginRef.current()
   }, [])
 
   // Manage loading state based on auth check completion
