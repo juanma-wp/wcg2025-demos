@@ -1,11 +1,14 @@
-# WordPress REST API Authentication Demos
+# WordPress REST API Authentication Demos - WordCamp Galicia 2025
 
-This repository contains React demo applications that demonstrate different authentication methods with WordPress REST API:
+This repository contains comprehensive demos for the talk **"Hablando con WordPress desde fuera: autenticación y acceso a datos"** at WordCamp Galicia 2025.
 
-1. **react-wp-oauth-demo** - React demo showcasing OAuth2 Authorization Code flow
-2. **react-wp-jwt-demo** - React demo showcasing JWT authentication with production deployment
+## 📁 Demo Projects
 
-> **📦 Required Plugin:** These demos work with the [wp-rest-auth-multi](https://github.com/juanma-wp/wp-rest-auth-multi) WordPress plugin (separate repository).
+1. **wp-rest-auth-demo** - WordPress plugin demonstrating custom endpoints and authentication integration
+2. **react-wp-oauth-demo** - React demo showcasing OAuth2 Authorization Code flow
+3. **react-wp-jwt-demo** - React demo showcasing JWT authentication with production deployment
+
+> **🔌 Required Plugins:** These demos work with professional authentication plugins (see setup section below).
 
 ## 🔧 Prerequisites
 
@@ -18,34 +21,117 @@ This repository contains React demo applications that demonstrate different auth
 
 ```
 wcg2025-demos/
-├── react-wp-oauth-demo/         # OAuth2 Demo App
-├── react-wp-jwt-demo/           # JWT Demo App
+├── wp-rest-auth-demo/           # WordPress Plugin Demo
+├── react-wp-oauth-demo/         # OAuth2 React Demo App
+├── react-wp-jwt-demo/           # JWT React Demo App
 └── README.md                    # This file
 ```
 
-## 🔌 WordPress Plugin Required
+## 🔌 WordPress Plugins Required
 
-These demos require the **[wp-rest-auth-multi](https://github.com/juanma-wp/wp-rest-auth-multi)** WordPress plugin to function properly.
+These demos work with professional authentication plugins that provide secure, production-ready authentication methods:
+
+### Authentication Plugins
+
+1. **[JWT Auth Pro WP REST API](https://github.com/juanma-wp/jwt-auth-pro-wp-rest-api)** - Modern JWT authentication with refresh tokens
+2. **[OAuth2 Auth Pro WP REST API](https://github.com/juanma-wp/oauth2-auth-pro-wp-rest-api)** - Complete OAuth2 Authorization Code flow
 
 ### Plugin Features
 
-- **JWT Authentication** with access/refresh token support
-- **OAuth2 Authorization Code Flow** with PKCE
+#### JWT Auth Pro
+- **Short-lived access tokens** (1 hour default) with secure refresh tokens
+- **HTTP-only cookies** for XSS protection
+- **Automatic token rotation** for enhanced security
+- **Session management** with database tracking
+- **CORS support** for React applications
+
+#### OAuth2 Auth Pro
+- **OAuth2 Authorization Code Flow** with PKCE security
 - **Scope-based permissions** (read, write, delete, upload_files, etc.)
 - **User consent screens** with WordPress-styled UI
+- **Third-party app authorization** support
 - **Comprehensive security** with proper token validation
-- **CORS support** for React applications
+
+### Alternative: Application Passwords
+
+For simpler setups, you can also use **WordPress Application Passwords** (available since WordPress 5.6) without additional plugins.
 
 ### Quick Setup
 
-1. Install the plugin from: https://github.com/juanma-wp/wp-rest-auth-multi
-2. Activate it in WordPress admin
-3. Configure JWT secret and OAuth2 clients
-4. Set up the React demos below
+1. Install the authentication plugins:
+   - [JWT Auth Pro](https://github.com/juanma-wp/jwt-auth-pro-wp-rest-api)
+   - [OAuth2 Auth Pro](https://github.com/juanma-wp/oauth2-auth-pro-wp-rest-api)
+2. Activate the one you need in WordPress admin (and deactivate the other one)
+3. Configure JWT secret and OAuth2 clients before using them
+4. Install the demo plugin and set up the React demos below
 
 ---
 
-## 🚀 1. OAuth2 Demo: `react-wp-oauth-demo`
+## 🔌 1. WordPress Plugin Demo: `wp-rest-auth-demo`
+
+A WordPress plugin that demonstrates how to create custom REST API endpoints and extend existing ones, showcasing how authentication works transparently across different methods.
+
+### Features
+
+- **Custom Public Endpoints** - Accessible without authentication
+- **Custom Protected Endpoints** - Require authentication (JWT, OAuth2, or Application Passwords)
+- **Capability-based Endpoints** - Require specific user permissions
+- **Extended Core Endpoints** - Add custom fields to existing WordPress endpoints
+- **Multi-auth Support** - Works with JWT, OAuth2, and Application Passwords simultaneously
+
+### What It Demonstrates
+
+1. ✅ **How to create custom endpoints protected by authentication**
+2. ✅ **How to modify/extend existing WordPress endpoints**
+3. ✅ **How JWT/OAuth2/Application Password authentication applies automatically to all endpoints**
+
+### Available Endpoints
+
+#### Public Endpoints
+- `GET /wp-json/wcg2025/v1/public/stats` - Site statistics (no auth required)
+
+#### Protected Endpoints
+- `GET /wp-json/wcg2025/v1/protected/user-data` - Current user information
+- `GET /wp-json/wcg2025/v1/protected/my-drafts` - User's draft posts
+- `PUT /wp-json/wcg2025/v1/protected/profile` - Update user profile
+
+#### Capability-based Endpoints
+- `POST /wp-json/wcg2025/v1/protected/editor-only` - Create featured content (editors only)
+
+#### Extended Core Endpoints
+- Enhanced `/wp-json/wp/v2/posts` with custom fields:
+  - `reading_time` - Estimated reading time
+  - `author_bio` - Author biography
+  - `view_count` - Post view counter (editable with auth)
+
+### Setup
+
+1. Copy the `wp-rest-auth-demo` folder to your WordPress plugins directory
+2. Activate the plugin in WordPress admin
+3. The endpoints are automatically registered and ready to use
+
+### Usage Examples
+
+```bash
+# Public endpoint - works without authentication
+curl https://your-site.com/wp-json/wcg2025/v1/public/stats
+
+# Protected endpoint with JWT
+curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  https://your-site.com/wp-json/wcg2025/v1/protected/user-data
+
+# Protected endpoint with OAuth2
+curl -H "Authorization: Bearer YOUR_OAUTH2_TOKEN" \
+  https://your-site.com/wp-json/wcg2025/v1/protected/user-data
+
+# Protected endpoint with Application Password
+curl -u "username:xxxx xxxx xxxx xxxx xxxx xxxx" \
+  https://your-site.com/wp-json/wcg2025/v1/protected/user-data
+```
+
+---
+
+## 🚀 2. OAuth2 Demo: `react-wp-oauth-demo`
 
 A complete React application demonstrating OAuth2 Authorization Code flow with WordPress, featuring interactive API testing and scope-based permissions.
 
@@ -108,7 +194,7 @@ A complete React application demonstrating OAuth2 Authorization Code flow with W
 
 ---
 
-## 🔐 2. JWT Demo: `react-wp-jwt-demo`
+## 🔐 3. JWT Demo: `react-wp-jwt-demo`
 
 A React application demonstrating JWT authentication with WordPress, including production deployment capabilities.
 
@@ -169,28 +255,40 @@ The JWT demo includes production deployment configurations:
 
 ```mermaid
 graph TD
-    A[wp-rest-auth-multi Plugin<br/>External Repository] --> B[WordPress REST API]
+    A[JWT Auth Pro Plugin] --> B[WordPress REST API]
+    A1[OAuth2 Auth Pro Plugin] --> B
+    A2[wp-rest-auth-demo Plugin] --> B
+    
     B --> C[react-wp-oauth-demo]
     B --> D[react-wp-jwt-demo]
+    B --> E[Custom Endpoints Demo]
 
-    C --> E[OAuth2 Authorization Code Flow]
-    D --> F[JWT Authentication]
+    C --> F[OAuth2 Authorization Code Flow]
+    D --> G[JWT Authentication]
+    E --> H[Multi-auth Endpoint Testing]
 
-    E --> G[User Consent & Scopes]
-    F --> H[Automatic Token Refresh]
+    F --> I[User Consent & Scopes]
+    G --> J[Automatic Token Refresh]
+    H --> K[Authentication Transparency]
 ```
 
 ## 📋 Setup Order
 
-1. **First**: Install the [wp-rest-auth-multi](https://github.com/juanma-wp/wp-rest-auth-multi) plugin in WordPress
-2. **Second**: Configure the plugin settings (JWT secret, OAuth2 clients)
-3. **Third**: Set up either or both React demo applications
-4. **Fourth**: Configure the demo apps to point to your WordPress installation
+1. **First**: Install the authentication plugins in WordPress:
+   - [JWT Auth Pro WP REST API](https://github.com/juanma-wp/jwt-auth-pro-wp-rest-api)
+   - [OAuth2 Auth Pro WP REST API](https://github.com/juanma-wp/oauth2-auth-pro-wp-rest-api)
+2. **Second**: Install and activate the `wp-rest-auth-demo` plugin
+3. **Third**: Configure the authentication plugin settings (JWT secret, OAuth2 clients)
+4. **Fourth**: Set up the React demo applications
+5. **Fifth**: Configure the demo apps to point to your WordPress installation
 
 ## 🛠️ Development Tips
 
-### WordPress Plugin
-- Install wp-rest-auth-multi from: https://github.com/juanma-wp/wp-rest-auth-multi
+### WordPress Plugins
+- Install authentication plugins:
+  - [JWT Auth Pro](https://github.com/juanma-wp/jwt-auth-pro-wp-rest-api)
+  - [OAuth2 Auth Pro](https://github.com/juanma-wp/oauth2-auth-pro-wp-rest-api)
+- Copy `wp-rest-auth-demo` to your plugins directory
 - Enable WordPress debug logging: `define('WP_DEBUG_LOG', true);`
 - Check logs at: `wp-content/debug.log`
 - Use the plugin's debug mode for OAuth2 troubleshooting
@@ -202,10 +300,12 @@ graph TD
 
 ### Common Issues
 
-1. **CORS Errors**: Ensure WordPress has proper CORS headers configured
-2. **Redirect URI Mismatch**: Verify OAuth2 client redirect URIs match exactly
-3. **Token Expiration**: Check JWT secret key configuration in WordPress
+1. **CORS Errors**: Ensure WordPress has proper CORS headers configured in the authentication plugins
+2. **Redirect URI Mismatch**: Verify OAuth2 client redirect URIs match exactly in OAuth2 Auth Pro settings
+3. **Token Expiration**: Check JWT secret key configuration in JWT Auth Pro settings
 4. **Scope Permissions**: Ensure user has proper WordPress capabilities for requested scopes
+5. **Plugin Dependencies**: Make sure both authentication plugins are installed and activated
+6. **Application Passwords**: For testing without plugins, ensure Application Passwords are enabled in WordPress
 
 ## 📚 Additional Resources
 
@@ -223,6 +323,36 @@ graph TD
 4. Test thoroughly
 5. Submit a pull request
 
+## 🎤 WordCamp Galicia 2025
+
+These demos were created for the talk **"Hablando con WordPress desde fuera: autenticación y acceso a datos"** at WordCamp Galicia 2025.
+
+### Talk Overview
+
+The presentation demonstrates three key concepts:
+
+1. **Creating custom REST API endpoints** with proper authentication
+2. **Extending existing WordPress endpoints** with custom fields
+3. **How authentication works transparently** across JWT, OAuth2, and Application Passwords
+
+### Demo Flow
+
+1. **WordPress Plugin Demo** - Show custom endpoints and authentication integration
+2. **React OAuth2 Demo** - Interactive OAuth2 flow with scope-based permissions
+3. **React JWT Demo** - Modern JWT authentication with refresh tokens
+4. **Live API Testing** - Real-time endpoint testing with different auth methods
+
+### Key Takeaways
+
+- Authentication is **transparent** - once configured, it works across all endpoints
+- **Multiple auth methods** can coexist (JWT, OAuth2, Application Passwords)
+- **Custom endpoints** integrate seamlessly with WordPress authentication
+- **Security best practices** are built into the authentication plugins
+
 ## 📄 License
 
 This project is licensed under the MIT License - see individual project directories for specific license files.
+
+---
+
+**¡Disfruta de la charla! 🚀**
