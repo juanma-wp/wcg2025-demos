@@ -78,16 +78,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [clearRefreshTimeout]);
 
   // Silent login on app load - singleton ensures it only runs once per reload
-  useEffect(() => {
-    // Create a singleton for the actual silent login attempt
-    const attemptSilentLogin = createSingleton(async () => {
+  // Create the singleton outside useEffect to ensure it's only created once per component instance
+  const attemptSilentLoginRef = useRef(
+    createSingleton(async () => {
       try {
         const tokenResponse = await refreshAccessToken();
         const userData = await getUserInfo(tokenResponse.access_token);
-        
+
         setAccessToken(tokenResponse.access_token);
         setUser(userData);
-        
+
         const scopes = tokenResponse.scope ? tokenResponse.scope.split(' ').filter(scope => scope.length > 0) : [];
         setGrantedScopes(scopes);
         scheduleRefresh(tokenResponse.expires_in);
@@ -97,9 +97,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Mark auth check as completed
         setAuthCheckCompleted(true);
       }
-    });
+    })
+  );
 
-    attemptSilentLogin();
+  useEffect(() => {
+    attemptSilentLoginRef.current();
   }, []);
 
   // Manage loading state based on auth check completion
@@ -118,6 +120,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     sessionStorage.setItem('pkce_code_verifier', codeVerifier);
 
     const authUrl = await buildAuthorizationUrl(oauthConfig, state, scopes, codeChallenge);
+    console.log('🔍 OAuth Debug - Authorization URL:', authUrl);
+    console.log('🔍 OAuth Debug - Code Challenge:', codeChallenge);
+    console.log('🔍 OAuth Debug - Code Verifier:', codeVerifier);
     window.location.href = authUrl;
   };
 
