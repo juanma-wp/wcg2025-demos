@@ -2,6 +2,10 @@
 
 A modern React application demonstrating secure JWT authentication directly with WordPress REST API using the [wp-rest-auth-multi](https://github.com/juanma-wp/wp-rest-auth-multi) plugin. Features access tokens in memory and refresh tokens handled by WordPress.
 
+[![JWT Flow](./assets/jwt-flow.png)](https://excalidraw.com/#json=7jKgRoCJniUvR5I-6gvD6,oCqJa8TA3Mn960oagaOb2A)
+
+see [diagram](https://excalidraw.com/#json=7jKgRoCJniUvR5I-6gvD6,oCqJa8TA3Mn960oagaOb2A)
+
 > **⚠️ Important:** This demo is specifically designed to work with the [wp-rest-auth-multi](https://github.com/juanma-wp/wp-rest-auth-multi) WordPress plugin. Other JWT plugins may not work without modifications.
 
 ## 🚀 Features

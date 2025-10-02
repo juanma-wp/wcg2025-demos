@@ -199,7 +199,7 @@ GET /wp-json/oauth2/v1/userinfo
 Authorization: Bearer <access_token>
 ```
 
-## 🔗 Related Demos
+## 🔗 Related Resources
 
 - [React WordPress JWT Demo](../react-wp-jwt-demo) - JWT authentication with refresh tokens
 - [OAuth2 Auth Pro - WP REST API](https://github.com/juanma-wp/oauth2-auth-pro-wp-rest-api) - WordPress OAuth2 authentication plugin
