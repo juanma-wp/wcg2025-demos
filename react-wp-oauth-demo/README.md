@@ -1,6 +1,10 @@
 # React WordPress OAuth2 Demo
 
-A React application demonstrating OAuth2 authentication with WordPress using the @wp-rest-auth-multi plugin. This demo showcases the OAuth2 Authorization Code flow for secure WordPress REST API integration.
+A React application demonstrating OAuth2 authentication with WordPress using the [OAuth2 Auth Pro - WP REST API](https://github.com/juanma-wp/oauth2-auth-pro-wp-rest-api) plugin. This demo showcases the OAuth2 Authorization Code flow for secure WordPress REST API integration.
+
+[![Diagram oAuth flow](./assets/diagram-flow.png)](https://excalidraw.com/#json=YGBS9qb176pnicnENaBH7,yu7uFNilUpicQozCIiKziw)
+
+see [diagram](https://excalidraw.com/#json=YGBS9qb176pnicnENaBH7,yu7uFNilUpicQozCIiKziw)
 
 ## 🚀 Features
 
@@ -17,17 +21,17 @@ A React application demonstrating OAuth2 authentication with WordPress using the
 ### Required Software
 - **Node.js** (version 16 or higher)
 - **npm** or **yarn** package manager
-- **WordPress site** with @wp-rest-auth-multi plugin
+- **WordPress site** with OAuth2 Auth Pro plugin
 
 ### WordPress Setup
 
-1. **Install Plugin**: Install the [@wp-rest-auth-multi plugin](../wp-rest-auth-multi)
+1. **Install Plugin**: Install the [OAuth2 Auth Pro - WP REST API](https://github.com/juanma-wp/oauth2-auth-pro-wp-rest-api) plugin
 
-2. **Configure WordPress**: Add JWT secret to `wp-config.php`:
+2. **Configure WordPress**: Add OAuth2 secret to `wp-config.php`:
    ```php
-   define('WP_JWT_AUTH_SECRET', 'your-very-long-and-random-secret-key-here');
-   define('WP_JWT_ACCESS_TTL', 900);     // 15 minutes (optional)
-   define('WP_JWT_REFRESH_TTL', 1209600); // 14 days (optional)
+   define('WP_OAUTH2_SECRET', 'your-very-long-and-random-secret-key-here');
+   define('WP_OAUTH2_ACCESS_TTL', 3600);      // 1 hour (optional)
+   define('WP_OAUTH2_REFRESH_TTL', 2592000);  // 30 days (optional)
    ```
 
 3. **OAuth2 Client**: The plugin automatically creates a demo OAuth2 client:
@@ -140,7 +144,7 @@ react-wp-oauth-demo/
 - **Ky** - Modern HTTP client
 
 ### WordPress Integration
-- **@wp-rest-auth-multi** - OAuth2 and JWT authentication plugin
+- **[OAuth2 Auth Pro - WP REST API](https://github.com/juanma-wp/oauth2-auth-pro-wp-rest-api)** - OAuth2 authentication plugin
 - **WordPress REST API** - Backend API endpoints
 
 ## 🛡️ Security Features
@@ -174,7 +178,7 @@ Check browser console for `🔍 OAuth Debug` messages covering:
 
 ## 📚 API Reference
 
-### WordPress OAuth2 Endpoints (via @wp-rest-auth-multi)
+### WordPress OAuth2 Endpoints (via OAuth2 Auth Pro)
 
 #### Authorization Endpoint
 ```
@@ -198,7 +202,7 @@ Authorization: Bearer <access_token>
 ## 🔗 Related Demos
 
 - [React WordPress JWT Demo](../react-wp-jwt-demo) - JWT authentication with refresh tokens
-- [@wp-rest-auth-multi Plugin](../wp-rest-auth-multi) - WordPress authentication plugin
+- [OAuth2 Auth Pro - WP REST API](https://github.com/juanma-wp/oauth2-auth-pro-wp-rest-api) - WordPress OAuth2 authentication plugin
 
 ## 🤝 Contributing
 
