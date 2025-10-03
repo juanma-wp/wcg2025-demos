@@ -251,27 +251,6 @@ The JWT demo includes production deployment configurations:
 
 ---
 
-## 🔗 Project Relationships
-
-```mermaid
-graph TD
-    A[JWT Auth Pro Plugin] --> B[WordPress REST API]
-    A1[OAuth2 Auth Pro Plugin] --> B
-    A2[wp-rest-auth-demo Plugin] --> B
-    
-    B --> C[react-wp-oauth-demo]
-    B --> D[react-wp-jwt-demo]
-    B --> E[Custom Endpoints Demo]
-
-    C --> F[OAuth2 Authorization Code Flow]
-    D --> G[JWT Authentication]
-    E --> H[Multi-auth Endpoint Testing]
-
-    F --> I[User Consent & Scopes]
-    G --> J[Automatic Token Refresh]
-    H --> K[Authentication Transparency]
-```
-
 ## 📋 Setup Order
 
 1. **First**: Install the authentication plugins in WordPress:

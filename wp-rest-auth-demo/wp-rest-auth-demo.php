@@ -1,8 +1,9 @@
 <?php
+
 /**
  * Plugin Name: WP REST Auth Demo - WordCamp Galicia 2025
  * Plugin URI: https://galicia.wordcamp.org/2025/
- * Description: Plugin de demostración para la charla "Hablando con WordPress desde fuera: autenticación y acceso a datos". Muestra cómo crear custom endpoints protegidos y modificar endpoints existentes con JWT y OAuth2.
+ * Description: Plugin de demostración para la charla "Hablando con WordPress desde fuera: autenticación y acceso a datos". Muestra cómo crear custom endpoints protegidos y modificar endpoints existentes
  * Version: 1.0.0
  * Author: Juan Manuel Garrido
  * Author URI: https://github.com/juanma-wp
@@ -28,12 +29,14 @@ define('WP_REST_AUTH_DEMO_PLUGIN_DIR', plugin_dir_path(__FILE__));
  * 2. Cómo modificar/extender endpoints existentes de WordPress
  * 3. Cómo la autenticación JWT/OAuth2 se aplica automáticamente a todos los endpoints
  */
-class WP_REST_Auth_Demo {
+class WP_REST_Auth_Demo
+{
 
     /**
      * Constructor - registra hooks principales
      */
-    public function __construct() {
+    public function __construct()
+    {
         add_action('rest_api_init', [$this, 'register_custom_endpoints']);
         add_action('rest_api_init', [$this, 'modify_existing_endpoints']);
         add_action('init', [$this, 'register_post_meta']);
@@ -47,7 +50,8 @@ class WP_REST_Auth_Demo {
      * - Requiere autenticación
      * - Requiere capacidades específicas
      */
-    public function register_custom_endpoints() {
+    public function register_custom_endpoints()
+    {
 
         // Endpoint PÚBLICO - No requiere autenticación
         register_rest_route('wcg2025/v1', '/public/stats', [
@@ -60,7 +64,7 @@ class WP_REST_Auth_Demo {
         register_rest_route('wcg2025/v1', '/protected/user-data', [
             'methods'  => 'GET',
             'callback' => [$this, 'get_user_data'],
-            'permission_callback' => function() {
+            'permission_callback' => function () {
                 // Este callback verifica que el usuario esté autenticado
                 // La autenticación la manejan los plugins JWT/OAuth2 automáticamente
                 return is_user_logged_in();
@@ -71,7 +75,7 @@ class WP_REST_Auth_Demo {
         register_rest_route('wcg2025/v1', '/protected/editor-only', [
             'methods'  => 'POST',
             'callback' => [$this, 'create_featured_content'],
-            'permission_callback' => function() {
+            'permission_callback' => function () {
                 return current_user_can('edit_pages');
             },
             'args' => [
@@ -92,7 +96,7 @@ class WP_REST_Auth_Demo {
         register_rest_route('wcg2025/v1', '/protected/my-drafts', [
             'methods'  => 'GET',
             'callback' => [$this, 'get_user_drafts'],
-            'permission_callback' => function() {
+            'permission_callback' => function () {
                 return is_user_logged_in();
             },
         ]);
@@ -101,7 +105,7 @@ class WP_REST_Auth_Demo {
         register_rest_route('wcg2025/v1', '/protected/profile', [
             'methods'  => 'PUT',
             'callback' => [$this, 'update_profile'],
-            'permission_callback' => function() {
+            'permission_callback' => function () {
                 return is_user_logged_in();
             },
             'args' => [
@@ -122,7 +126,8 @@ class WP_REST_Auth_Demo {
      *
      * Demuestra cómo añadir campos personalizados a endpoints estándar de WordPress
      */
-    public function modify_existing_endpoints() {
+    public function modify_existing_endpoints()
+    {
 
         // Añadir campo personalizado "reading_time" a posts
         register_rest_field('post', 'reading_time', [
@@ -156,7 +161,8 @@ class WP_REST_Auth_Demo {
     /**
      * Registrar post meta necesario para los campos personalizados
      */
-    public function register_post_meta() {
+    public function register_post_meta()
+    {
         register_post_meta('post', 'view_count', [
             'type' => 'integer',
             'single' => true,
@@ -172,7 +178,8 @@ class WP_REST_Auth_Demo {
     /**
      * Endpoint público - Estadísticas generales del sitio
      */
-    public function get_public_stats($request) {
+    public function get_public_stats($request)
+    {
         $stats = [
             'total_posts' => wp_count_posts('post')->publish,
             'total_pages' => wp_count_posts('page')->publish,
@@ -191,7 +198,8 @@ class WP_REST_Auth_Demo {
      * IMPORTANTE: Este endpoint funciona tanto con JWT como con OAuth2
      * porque WordPress ya ha autenticado al usuario antes de llegar aquí.
      */
-    public function get_user_data($request) {
+    public function get_user_data($request)
+    {
         $user = wp_get_current_user();
 
         // Preparar respuesta con datos del usuario
@@ -213,7 +221,8 @@ class WP_REST_Auth_Demo {
     /**
      * Endpoint protegido - Crear contenido destacado (solo editores+)
      */
-    public function create_featured_content($request) {
+    public function create_featured_content($request)
+    {
         $title = $request->get_param('title');
         $content = $request->get_param('content');
 
@@ -248,7 +257,8 @@ class WP_REST_Auth_Demo {
     /**
      * Endpoint protegido - Obtener borradores del usuario
      */
-    public function get_user_drafts($request) {
+    public function get_user_drafts($request)
+    {
         $user_id = get_current_user_id();
 
         $drafts = get_posts([
@@ -257,7 +267,7 @@ class WP_REST_Auth_Demo {
             'posts_per_page' => -1,
         ]);
 
-        $formatted_drafts = array_map(function($post) {
+        $formatted_drafts = array_map(function ($post) {
             return [
                 'id' => $post->ID,
                 'title' => $post->post_title,
@@ -276,7 +286,8 @@ class WP_REST_Auth_Demo {
     /**
      * Endpoint protegido - Actualizar perfil del usuario
      */
-    public function update_profile($request) {
+    public function update_profile($request)
+    {
         $user_id = get_current_user_id();
         $bio = $request->get_param('bio');
         $website = $request->get_param('website');
@@ -310,7 +321,8 @@ class WP_REST_Auth_Demo {
     /**
      * Calcular tiempo de lectura estimado
      */
-    public function get_reading_time($post) {
+    public function get_reading_time($post)
+    {
         $content = get_post_field('post_content', $post['id']);
         $word_count = str_word_count(strip_tags($content));
         $minutes = ceil($word_count / 200); // ~200 palabras por minuto
@@ -321,7 +333,8 @@ class WP_REST_Auth_Demo {
     /**
      * Obtener biografía del autor
      */
-    public function get_author_bio($post) {
+    public function get_author_bio($post)
+    {
         $author_id = $post['author'];
         return get_the_author_meta('description', $author_id);
     }
@@ -329,7 +342,8 @@ class WP_REST_Auth_Demo {
     /**
      * Obtener contador de vistas
      */
-    public function get_view_count($post) {
+    public function get_view_count($post)
+    {
         $count = get_post_meta($post['id'], 'view_count', true);
         return $count ? (int) $count : 0;
     }
@@ -337,7 +351,8 @@ class WP_REST_Auth_Demo {
     /**
      * Actualizar contador de vistas (requiere autenticación)
      */
-    public function update_view_count($value, $post) {
+    public function update_view_count($value, $post)
+    {
         // Solo usuarios autenticados pueden actualizar el contador
         if (!is_user_logged_in()) {
             return new WP_Error(
@@ -362,7 +377,8 @@ class WP_REST_Auth_Demo {
      *
      * Esto es útil para debugging y demostración
      */
-    private function get_auth_method() {
+    private function get_auth_method()
+    {
         if (!is_user_logged_in()) {
             return 'none';
         }
