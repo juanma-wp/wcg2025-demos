@@ -104,8 +104,6 @@ export async function getUserInfo(accessToken: string): Promise<UserInfo> {
 }
 
 export async function logout(): Promise<void> {
-  localStorage.removeItem('oauth2_refresh_token_fallback');
-  localStorage.removeItem('oauth2_granted_scopes_fallback');
 
   try {
     await ky.post(`${config.wpBaseUrl}/wp-json/oauth2/v1/logout`, {
