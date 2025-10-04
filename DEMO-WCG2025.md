@@ -52,9 +52,38 @@ X-WP-Nonce no disponible en el frontend
 
 ## Authentication Passwords
 
+👉 GET a endpoint que requiere autenticación
+```bash
+curl -u "admin:XpBF zaTo TBCI z1ur PkIb YLZq" \
+  https://wcg2025-demo.wp.local/wp-json/wp/v2/users/me
+```
+
+👉 POST
+```bash
+curl -X POST \
+  -u "admin:XpBF zaTo TBCI z1ur PkIb YLZq" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Mi contenido con Authentication Passwords",
+    "content": "<p>Este es un contenido importante usando Authentication Passwords</p>"
+  }' \
+  https://wcg2025-demo.wp.local/wp-json/wp/v2/posts
+```
+
 → Postman
+**Authorization** - Basic Auth
+**Body** - raw - JSON
 
 ## JWT
+
+Necesitamos un token que nos represente (como logeado) en la app (sin nuestras credenciales)
+
+👉 https://excalidraw.com/#json=7jKgRoCJniUvR5I-6gvD6,oCqJa8TA3Mn960oagaOb2A
+
+👉 Activte "JWT Auth Pro WP REST API"
+
+/Users/juanmanuelgarrido/PROJECTS/2025/wcg2025-demos/react-wp-jwt-demo
+👉 npm run dev 
 
 - https://www.jwt.io/
 
