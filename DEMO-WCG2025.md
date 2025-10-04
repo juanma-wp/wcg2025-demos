@@ -22,6 +22,7 @@ admin:b5GpT!kEqJ!cr)tdatPNkel$
 - nonce `X-WP-Nonce`
 
 👉 Network - filter by Fetch/Post
+
 👉 Desde Edit Post
 
 👉 Edit and Update post
@@ -54,16 +55,18 @@ X-WP-Nonce no disponible en el frontend
 
 ## Authentication Passwords
 
+QCgu 4AZE 1XiA Qr7n MkZ9 uR6l
+
 👉 GET a endpoint que requiere autenticación
 ```bash
-curl -u "admin:XpBF zaTo TBCI z1ur PkIb YLZq" \
+curl -u "admin:QCgu 4AZE 1XiA Qr7n MkZ9 uR6l" \
   https://wcg2025-demo.wp.local/wp-json/wp/v2/users/me
 ```
 
 👉 POST
 ```bash
 curl -X POST \
-  -u "admin:XpBF zaTo TBCI z1ur PkIb YLZq" \
+  -u "admin:QCgu 4AZE 1XiA Qr7n MkZ9 uR6l" \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Mi contenido con Authentication Passwords",
@@ -121,3 +124,29 @@ https://excalidraw.com/#json=YUZbGnsF5Qi6r3Mv38ul9,_jxLpNIysnU9lW8H__ciqg
 
 
 - https://www.freeformatter.com/url-parser-query-string-splitter.html
+
+Revisar parametros Query String
+Revisar requests to the server (auth_code, refresh...)
+
+👉 GET a endpoint que requiere autenticación
+```bash
+curl -H "Authorization: Bearer TU_TOKEN_JWT" \
+  https://wcg2025-demo.wp.local/wp-json/wp/v2/users/me
+```
+
+👉 POST
+```bash
+curl -X POST \
+  -H "Authorization: Bearer TU_TOKEN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Mi contenido con JWT Token",
+    "content": "<p>Este es un contenido importante usando JWT Token</p>"
+  }' \
+  https://wcg2025-demo.wp.local/wp-json/wp/v2/posts
+```
+
+
+## Custom Endpoints
+
+👉 Activar plugin y chequear endpoints (ver README)
