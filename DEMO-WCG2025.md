@@ -1,5 +1,7 @@
 # Demo WC Galicia 2025 (Notes)
 
+Usar Chrome!! 
+
 👉 https://docs.google.com/presentation/d/1aA2FoCPgTwCEQcgEROAVTP8uLbUCLdqa/edit?usp=sharing&ouid=103017329496724066368&rtpof=true&sd=true
 
 
@@ -85,8 +87,37 @@ Necesitamos un token que nos represente (como logeado) en la app (sin nuestras c
 /Users/juanmanuelgarrido/PROJECTS/2025/wcg2025-demos/react-wp-jwt-demo
 👉 npm run dev 
 
+📺 Open dual screens demo <> diagram
+
 - https://www.jwt.io/
 
+👉 GET a endpoint que requiere autenticación
+```bash
+curl -H "Authorization: Bearer TU_TOKEN_JWT" \
+  https://wcg2025-demo.wp.local/wp-json/wp/v2/users/me
+```
+
+👉 POST
+```bash
+curl -X POST \
+  -H "Authorization: Bearer TU_TOKEN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Mi contenido con JWT Token",
+    "content": "<p>Este es un contenido importante usando JWT Token</p>"
+  }' \
+  https://wcg2025-demo.wp.local/wp-json/wp/v2/posts
+```
+
+
 ## OAuth2
+
+No queremos que nuestra third party app toque las credenciales
+
+
+👉 Activte "OAuth2 Auth Pro WP REST API" (deactivate JWT plugin)
+
+https://excalidraw.com/#json=YUZbGnsF5Qi6r3Mv38ul9,_jxLpNIysnU9lW8H__ciqg
+
 
 - https://www.freeformatter.com/url-parser-query-string-splitter.html
